@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Tableau de bord - Aide ménagère</h1>
+
+<div class="row mt-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5>Mon profil</h5>
+            </div>
+            <div class="card-body">
+                <p><strong>Nom :</strong> {{ profile.full_name }}</p>
+                <p><strong>Ville :</strong> {{ profile.city }}</p>
+                <p><strong>Tarif :</strong> {{ "%.2f"|format(profile.hourly_rate) }} DH/h</p>
+                <p><strong>Statut :</strong> 
+                    {% if profile.is_available %}
+                        <span class="text-success">Disponible</span>
+                    {% else %}
+                        <span class="text-danger">Indisponible</span>
+                    {% endif %}
+                </p>
+                {% if not current_user.is_verified %}
+                    <div class="alert alert-warning">En attente de vérification par l'admin</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5>Demandes reçues</h5>
+        <a href="{{ url_for('messages') }}" class="btn btn-sm btn-outline-primary">Voir tout</a>
+    </div>
+    <div class="card-body">
+        {% if requests %}
+            <ul class="list-group">
+            {% for req in requests %}
+                <a href="{{ url_for('view_request', request_id=req.id) }}" class="list-group-item list-group-item-action">
+                    <div class="d-flex justify-content-between">
+                        <span>Client #{{ req.client_id }}</span>
+                        <span class="badge bg-{{ 'success' if req.status == 'accepted' else 'warning' if req.status == 'pending' else 'secondary' }}">
+                            {{ req.status }}
+                        </span>
+                    </div>
+                    <small>{{ req.created_at.strftime('%d/%m/%Y') }}</small>
+                </a>
+            {% endfor %}
+            </ul>
+        {% else %}
+            <p>Aucune demande reçue.</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

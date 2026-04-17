@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Tableau de bord - Client</h1>
+
+<div class="row mt-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5>Mes aides ménagères favorites</h5>
+            </div>
+            <div class="card-body">
+                {% if favorite_maids %}
+                    <div class="list-group">
+                    {% for maid in favorite_maids %}
+                        <a href="{{ url_for('maid_profile', maid_id=maid.id) }}" class="list-group-item list-group-item-action">
+                            {{ maid.full_name }} - {{ maid.city }}
+                            <span class="badge bg-primary">{{ "%.2f"|format(maid.hourly_rate) }} DH/h</span>
+                        </a>
+                    {% endfor %}
+                    </div>
+                {% else %}
+                    <p>Vous n'avez pas encore de favoris.</p>
+                    <a href="{{ url_for('browse_maids') }}" class="btn btn-primary">Trouver une aide</a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5>Mes conversations</h5>
+        <a href="{{ url_for('messages') }}" class="btn btn-sm btn-outline-primary">Voir tout</a>
+    </div>
+    <div class="card-body">
+        {% if requests %}
+            <ul class="list-group">
+            {% for req in requests %}
+                <a href="{{ url_for('view_request', request_id=req.id) }}" class="list-group-item list-group-item-action">
+                    <div class="d-flex justify-content-between">
+                        <span>{{ req.maid.maid_profile.full_name }}</span>
+                        <span class="badge bg-{{ 'success' if req.status == 'accepted' else 'warning' }}">
+                            {{ req.status }}
+                        </span>
+                    </div>
+                </a>
+            {% endfor %}
+            </ul>
+        {% else %}
+            <p>Aucune conversation.</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

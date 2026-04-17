@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h3>Utilisateur #{{ user.id }}</h3>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    {{ form.hidden_tag() }}
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Email</label>
+                        <input type="email" class="form-control" value="{{ user.email }}" readonly>
+                    </div>
+                    
+                    <div class="mb-3">
+                        {{ form.role.label(class="form-label") }}
+                        {{ form.role(class="form-select") }}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <div class="form-check">
+                            {{ form.is_active(class="form-check-input") }}
+                            {{ form.is_active.label(class="form-check-label") }}
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Statut de vérification</label>
+                        <input type="text" class="form-control" 
+                               value="{{ 'Vérifié' if user.is_verified else 'Non vérifié' }}" readonly>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Inscrit le</label>
+                        <input type="text" class="form-control" 
+                               value="{{ user.created_at.strftime('%d/%m/%Y %H:%M') }}" readonly>
+                    </div>
+                    
+                    {{ form.submit(class="btn btn-primary") }}
+                    <a href="{{ url_for('admin_users') }}" class="btn btn-secondary">Annuler</a>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5>Informations supplémentaires</h5>
+            </div>
+            <div class="card-body">
+                {% if user.role == 'maid' and user.maid_profile %}
+                    <h6>Profil d'aide ménagère</h6>
+                    <p><strong>Nom :</strong> {{ user.maid_profile.full_name }}</p>
+                    <p><strong>Ville :</strong> {{ user.maid_profile.city }}</p>
+                    <p><strong>Tarif :</strong> {{ user.maid_profile.hourly_rate }} DH/h</p>
+                    <p><strong>Note :</strong> {{ "%.1f"|format(user.maid_profile.rating) }}/5</p>
+                    <a href="{{ url_for('admin_maid_detail', maid_id=user.maid_profile.id) }}" class="btn btn-info">
+                        Voir le profil complet
+                    </a>
+                {% elif user.role == 'client' and user.client_profile %}
+                    <p>Client depuis {{ user.created_at.strftime('%d/%m/%Y') }}</p>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="card mt-3">
+            <div class="card-header">
+                <h5>Statistiques</h5>
+            </div>
+            <div class="card-body">
+                <p><strong>Messages envoyés :</strong> {{ user.sent_messages|length }}</p>
+                <p><strong>Messages reçus :</strong> {{ user.received_messages|length }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

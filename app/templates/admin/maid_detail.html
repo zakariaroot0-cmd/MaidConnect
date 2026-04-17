@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="row">
+    <div class="col-md-8">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h3>Profil de {{ maid.full_name }}</h3>
+            </div>
+            <div class="card-body">
+                <!-- Informations détaillées ici -->
+                <h5>Informations personnelles</h5>
+                <p><strong>Email :</strong> {{ user.email }}</p>
+                <p><strong>Téléphone :</strong> {{ maid.phone }}</p>
+                <p><strong>Ville :</strong> {{ maid.city }}</p>
+                <p><strong>Langues :</strong> {{ maid.languages }}</p>
+                
+                <h5 class="mt-4">Compétences et expérience</h5>
+                <p><strong>Compétences :</strong> {{ maid.skills }}</p>
+                <p><strong>Expérience :</strong> {{ maid.experience }}</p>
+                
+                <h5 class="mt-4">Statistiques</h5>
+                <p><strong>Prestations complétées :</strong> {{ completed_requests }}</p>
+                <p><strong>Note moyenne :</strong> {{ "%.1f"|format(maid.rating) }}/5</p>
+            </div>
+        </div>
+        
+        <!-- Derniers avis -->
+        <div class="card">
+            <div class="card-header">
+                <h5>Derniers avis reçus</h5>
+            </div>
+            <div class="card-body">
+                {% if reviews %}
+                    {% for review in reviews %}
+                    <div class="border-bottom mb-3 pb-3">
+                        <div class="d-flex justify-content-between">
+                            <strong>{{ review.rating }}/5 ⭐</strong>
+                            <small>{{ review.created_at.strftime('%d/%m/%Y') }}</small>
+                        </div>
+                        <p class="mb-0">{{ review.comment or 'Pas de commentaire' }}</p>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-muted">Aucun avis pour le moment.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5>Vérification</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    {{ form.hidden_tag() }}
+                    
+                    <div class="mb-3">
+                        {{ form.is_verified.label(class="form-label") }}
+                        {{ form.is_verified(class="form-select") }}
+                    </div>
+                    
+                    <div class="mb-3">
+                        {{ form.admin_notes.label(class="form-label") }}
+                        {{ form.admin_notes(class="form-control", rows=4) }}
+                        <small class="text-muted">Notes visibles uniquement par les administrateurs</small>
+                    </div>
+                    
+                    {{ form.submit(class="btn btn-primary w-100") }}
+                </form>
+                
+                <hr>
+                
+                <h6>Actions</h6>
+                <a href="{{ url_for('admin_user_detail', user_id=user.id) }}" class="btn btn-secondary w-100 mb-2">
+                    Gérer le compte utilisateur
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

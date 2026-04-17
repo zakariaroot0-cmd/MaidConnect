@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Mes conversations</h1>
+
+<div class="row mt-4">
+    <div class="col-md-12">
+        {% if requests %}
+            <div class="list-group">
+                {% for req in requests %}
+                    <a href="{{ url_for('view_request', request_id=req.id) }}" class="list-group-item list-group-item-action">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="mb-1">
+                                    {% if current_user.role == 'client' %}
+                                        {{ req.maid.maid_profile.full_name }}
+                                    {% else %}
+                                        Client #{{ req.client_id }}
+                                    {% endif %}
+                                </h6>
+                                <small>{{ req.updated_at.strftime('%d/%m/%Y %H:%M') }}</small>
+                            </div>
+                            <span class="badge bg-primary">{{ req.status }}</span>
+                        </div>
+                    </a>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="alert alert-info">
+                <p>Aucune conversation active.</p>
+                <a href="{{ url_for('browse_maids') }}" class="btn btn-primary">Trouver une aide ménagère</a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

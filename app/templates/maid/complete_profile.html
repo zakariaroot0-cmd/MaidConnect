@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h3>Complétez votre profil d'aide ménagère</h3>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    {{ form.hidden_tag() }}
+                    <div class="mb-3">
+                        {{ form.full_name.label(class="form-label") }}
+                        {{ form.full_name(class="form-control") }}
+                    </div>
+                    <div class="mb-3">
+                        {{ form.phone.label(class="form-label") }}
+                        {{ form.phone(class="form-control") }}
+                    </div>
+                    <div class="mb-3">
+                        {{ form.city.label(class="form-label") }}
+                        {{ form.city(class="form-control") }}
+                    </div>
+                    <div class="mb-3">
+                        {{ form.hourly_rate.label(class="form-label") }}
+                        {{ form.hourly_rate(class="form-control", placeholder="Ex: 50") }}
+                    </div>
+                    <div class="mb-3">
+                        {{ form.languages.label(class="form-label") }}
+                        {{ form.languages(class="form-control", placeholder="Français, Arabe, Anglais") }}
+                    </div>
+                    <div class="mb-3">
+                        {{ form.experience.label(class="form-label") }}
+                        {{ form.experience(class="form-control", rows=3) }}
+                    </div>
+                    <div class="mb-3">
+                        {{ form.skills.label(class="form-label") }}
+                        {{ form.skills(class="form-control", rows=3, placeholder="Ménage, cuisine, garde d'enfants...") }}
+                    </div>
+                    {{ form.submit(class="btn btn-primary") }}
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

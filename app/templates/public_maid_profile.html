@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="row">
+    <div class="col-md-8">
+        <div class="card mb-4">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <h2>{{ maid.full_name }}</h2>
+                    {% if current_user.is_authenticated and current_user.role == 'client' %}
+                    <form method="POST" action="{{ url_for('toggle_favorite', maid_id=maid.user_id) }}">
+                        <button type="submit" class="btn btn-outline-danger">
+                            {% if is_favorite %}❤️ Retirer des favoris{% else %}🤍 Ajouter aux favoris{% endif %}
+                        </button>
+                    </form>
+                    {% endif %}
+                </div>
+                
+                {% if maid.user.is_verified %}
+                    <span class="badge bg-success mb-3">✅ Identité vérifiée</span>
+                {% endif %}
+                
+                <hr>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <p><strong>📍 Ville :</strong> {{ maid.city }}</p>
+                        <p><strong>💰 Tarif :</strong> {{ "%.2f"|format(maid.hourly_rate) }} DH/heure</p>
+                        <p><strong>🗣️ Langues :</strong> {{ maid.languages }}</p>
+                        <p><strong>⭐ Note :</strong> {{ "%.1f"|format(maid.rating) }}/5.0</p>
+                        <p><strong>🟢 Disponibilité :</strong> 
+                            {% if maid.is_available %}
+                                <span class="text-success">Disponible</span>
+                            {% else %}
+                                <span class="text-danger">Indisponible</span>
+                            {% endif %}
+                        </p>
+                    </div>
+                    <div class="col-md-6">
+                        <h5>Compétences</h5>
+                        <p>{{ maid.skills or 'Non spécifié' }}</p>
+                        
+                        <h5>Expérience</h5>
+                        <p>{{ maid.experience or 'Non spécifié' }}</p>
+                    </div>
+                </div>
+                
+                {% if current_user.is_authenticated and current_user.role == 'client' %}
+                <hr>
+                <button class="btn btn-primary btn-lg w-100" onclick="alert('Fonctionnalité de contact à venir')">
+                    📧 Contacter {{ maid.full_name.split()[0] }}
+                </button>
+                {% elif not current_user.is_authenticated %}
+                <div class="alert alert-info mt-3">
+                    <a href="{{ url_for('login') }}">Connectez-vous</a> en tant que client pour contacter cette aide ménagère.
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5>À propos</h5>
+            </div>
+            <div class="card-body">
+                <p>Membre depuis {{ maid.created_at.strftime('%d/%m/%Y') }}</p>
+                <!-- Placeholder pour photo -->
+                <div class="text-center">
+                    <div class="bg-light rounded-circle d-inline-flex justify-content-center align-items-center" 
+                         style="width: 150px; height: 150px;">
+                        <span style="font-size: 3rem;">👤</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

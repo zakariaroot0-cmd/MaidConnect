@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>Gestion des aides ménagères</h1>
+    <a href="{{ url_for('admin_dashboard') }}" class="btn btn-secondary">← Retour</a>
+</div>
+
+<!-- Filtres -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="GET" class="row g-3">
+            <div class="col-md-4">
+                <select name="status" class="form-select">
+                    <option value="">Tous les statuts</option>
+                    <option value="pending" {% if request.args.get('status') == 'pending' %}selected{% endif %}>
+                        En attente de vérification
+                    </option>
+                    <option value="verified" {% if request.args.get('status') == 'verified' %}selected{% endif %}>
+                        Vérifiés
+                    </option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary w-100">Filtrer</button>
+            </div>
+            <div class="col-md-2">
+                <a href="{{ url_for('admin_maids') }}" class="btn btn-secondary w-100">Reset</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Liste des maids -->
+<div class="row">
+    {% for maid in maids.items %}
+    <div class="col-md-6 mb-3">
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <h5>{{ maid.full_name }}</h5>
+                    <span>
+                        {% if maid.user.is_verified %}
+                            <span class="badge bg-success">✅ Vérifié</span>
+                        {% else %}
+                            <span class="badge bg-warning">⏳ En attente</span>
+                        {% endif %}
+                    </span>
+                </div>
+                <p class="text-muted">{{ maid.user.email }}</p>
+                <p>
+                    <strong>Ville :</strong> {{ maid.city }}<br>
+                    <strong>Tarif :</strong> {{ "%.2f"|format(maid.hourly_rate) }} DH/h<br>
+                    <strong>Note :</strong> {{ "%.1f"|format(maid.rating) }}/5<br>
+                    <strong>Inscrite le :</strong> {{ maid.created_at.strftime('%d/%m/%Y') }}
+                </p>
+                <a href="{{ url_for('admin_maid_detail', maid_id=maid.id) }}" class="btn btn-primary">
+                    Gérer ce profil
+                </a>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Pagination -->
+{% if maids.pages > 1 %}
+<nav>
+    <ul class="pagination">
+        {% for page in maids.iter_pages() %}
+            {% if page %}
+                <li class="page-item {% if page == maids.page %}active{% endif %}">
+                    <a class="page-link" href="{{ url_for('admin_maids', page=page, **request.args) }}">{{ page }}</a>
+                </li>
+            {% endif %}
+        {% endfor %}
+    </ul>
+</nav>
+{% endif %}
+{% endblock %}

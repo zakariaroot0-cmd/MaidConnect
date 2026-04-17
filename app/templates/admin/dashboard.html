@@ -1,0 +1,157 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>Tableau de bord Administrateur</h1>
+    <span class="text-muted">{{ current_user.email }}</span>
+</div>
+
+<!-- Menu admin -->
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="btn-group" role="group">
+            <a href="{{ url_for('admin_users') }}" class="btn btn-outline-primary">👥 Utilisateurs</a>
+            <a href="{{ url_for('admin_maids') }}" class="btn btn-outline-primary">🧹 Aides ménagères</a>
+            <a href="{{ url_for('admin_requests') }}" class="btn btn-outline-primary">📋 Demandes</a>
+            <a href="{{ url_for('admin_reviews') }}" class="btn btn-outline-primary">⭐ Avis</a>
+        </div>
+    </div>
+</div>
+
+<!-- Statistiques -->
+<div class="row">
+    <div class="col-md-2">
+        <div class="card text-white bg-primary mb-3">
+            <div class="card-body text-center">
+                <h3>{{ total_users }}</h3>
+                <p class="mb-0">Utilisateurs</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card text-white bg-success mb-3">
+            <div class="card-body text-center">
+                <h3>{{ total_maids }}</h3>
+                <p class="mb-0">Aides</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card text-white bg-info mb-3">
+            <div class="card-body text-center">
+                <h3>{{ total_clients }}</h3>
+                <p class="mb-0">Clients</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card text-white bg-warning mb-3">
+            <div class="card-body text-center">
+                <h3>{{ pending_verifications }}</h3>
+                <p class="mb-0">En attente</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card text-white bg-secondary mb-3">
+            <div class="card-body text-center">
+                <h3>{{ active_requests }}</h3>
+                <p class="mb-0">Demandes actives</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card text-white bg-dark mb-3">
+            <div class="card-body text-center">
+                <h3>{{ total_reviews }}</h3>
+                <p class="mb-0">Avis</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Actions rapides -->
+<div class="row mt-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5>🔔 Actions en attente</h5>
+            </div>
+            <div class="card-body">
+                {% if pending_verifications > 0 %}
+                    <div class="alert alert-warning">
+                        <strong>{{ pending_verifications }}</strong> profils d'aides en attente de vérification
+                        <a href="{{ url_for('admin_maids', status='pending') }}" class="btn btn-sm btn-warning ms-2">
+                            Vérifier maintenant
+                        </a>
+                    </div>
+                {% else %}
+                    <p class="text-success">✅ Tous les profils sont vérifiés</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5>📊 Activité récente (inscriptions par mois)</h5>
+            </div>
+            <div class="card-body">
+                {% if months and counts %}
+                    <canvas id="userChart" width="400" height="200"></canvas>
+                {% else %}
+                    <p class="text-muted">Pas encore assez de données pour afficher le graphique.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if months and counts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+(function() {
+    const canvas = document.getElementById('userChart');
+    if (!canvas) return;
+    
+    const ctx = canvas.getContext('2d');
+    
+    const monthsData = {{ months|tojson }};
+    const countsData = {{ counts|tojson }};
+    
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: monthsData,
+            datasets: [{
+                label: 'Nouvelles inscriptions',
+                data: countsData,
+                borderColor: 'rgb(75, 192, 192)',
+                backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                tension: 0.1,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'top'
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        stepSize: 1
+                    }
+                }
+            }
+        }
+    });
+})();
+</script>
+{% endif %}
+
+{% endblock %}

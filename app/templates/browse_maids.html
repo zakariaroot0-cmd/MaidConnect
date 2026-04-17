@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block content %}
+<h1 class="mb-4">Trouvez votre aide ménagère</h1>
+
+<!-- Formulaire de recherche -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="GET" class="row g-3">
+            <div class="col-md-3">
+                <label class="form-label">Ville</label>
+                <select name="city" class="form-select">
+                    <option value="">Toutes les villes</option>
+                    {% for city in cities %}
+                        <option value="{{ city[0] }}" {% if request.args.get('city') == city[0] %}selected{% endif %}>
+                            {{ city[0] }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Tarif minimum (DH/h)</label>
+                <input type="number" name="min_rate" class="form-control" 
+                       value="{{ request.args.get('min_rate', '') }}" step="10">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Tarif maximum (DH/h)</label>
+                <input type="number" name="max_rate" class="form-control" 
+                       value="{{ request.args.get('max_rate', '') }}" step="10">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Langue</label>
+                <input type="text" name="languages" class="form-control" 
+                       value="{{ request.args.get('languages', '') }}" placeholder="Français, Arabe...">
+            </div>
+            <div class="col-12">
+                <button type="submit" class="btn btn-primary">Rechercher</button>
+                <a href="{{ url_for('browse_maids') }}" class="btn btn-secondary">Réinitialiser</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Résultats -->
+<div class="row">
+    {% if maids %}
+        {% for maid in maids %}
+        <div class="col-md-4 mb-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">{{ maid.full_name }}</h5>
+                    <p class="card-text">
+                        <strong>📍</strong> {{ maid.city }}<br>
+                        <strong>💰</strong> {{ "%.2f"|format(maid.hourly_rate) }} DH/heure<br>
+                        <strong>🗣️</strong> {{ maid.languages }}<br>
+                        <strong>⭐</strong> {{ "%.1f"|format(maid.rating) }}/5.0<br>
+                        {% if maid.user.is_verified %}
+                            <span class="badge bg-success">✅ Vérifié</span>
+                        {% endif %}
+                    </p>
+                    <a href="{{ url_for('maid_profile', maid_id=maid.id) }}" class="btn btn-outline-primary">
+                        Voir le profil
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+        <div class="col-12">
+            <div class="alert alert-info">Aucune aide ménagère trouvée avec ces critères.</div>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
