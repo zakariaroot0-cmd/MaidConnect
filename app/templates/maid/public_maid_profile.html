@@ -1,0 +1,175 @@
+{% extends "base.html" %}
+
+{% block title %}{{ maid.full_name }} - Profil{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <!-- Breadcrumb -->
+    <nav class="flex mb-6 text-sm">
+        <a href="{{ url_for('index') }}" class="text-gray-500 dark:text-gray-400 hover:text-primary-600">Accueil</a>
+        <span class="mx-2 text-gray-400">/</span>
+        <a href="{{ url_for('browse_maids') }}" class="text-gray-500 dark:text-gray-400 hover:text-primary-600">Aides ménagères</a>
+        <span class="mx-2 text-gray-400">/</span>
+        <span class="text-gray-900 dark:text-white">{{ maid.full_name }}</span>
+    </nav>
+    
+    <div class="grid lg:grid-cols-3 gap-8">
+        <!-- Colonne de gauche - Photo et infos principales -->
+        <div class="lg:col-span-1">
+            <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden sticky top-24">
+                <!-- Photo de profil -->
+                <div class="p-6 text-center">
+                    <div class="relative inline-block">
+                        {% if maid.profile_picture %}
+                            <img src="{{ url_for('static', filename='uploads/' + maid.profile_picture) }}" 
+                                 alt="{{ maid.full_name }}" 
+                                 class="w-40 h-40 rounded-full object-cover border-4 border-white dark:border-gray-700 shadow-lg">
+                        {% else %}
+                            <div class="w-40 h-40 rounded-full bg-gradient-to-br from-primary-400 to-secondary-500 flex items-center justify-center text-white text-5xl font-bold shadow-lg">
+                                {{ maid.full_name[0].upper() }}
+                            </div>
+                        {% endif %}
+                        {% if maid.is_available %}
+                            <span class="absolute bottom-2 right-2 w-5 h-5 bg-success-500 border-2 border-white dark:border-gray-800 rounded-full" title="Disponible"></span>
+                        {% endif %}
+                    </div>
+                    
+                    <h1 class="text-2xl font-bold text-gray-900 dark:text-white mt-4">{{ maid.full_name }}</h1>
+                    
+                    <div class="flex items-center justify-center mt-2 space-x-2">
+                        {% if user.is_verified %}
+                            <span class="bg-success-100 dark:bg-success-900/30 text-success-800 dark:text-success-400 text-xs px-3 py-1 rounded-full flex items-center">
+                                <i class="fas fa-check-circle mr-1"></i>Identité vérifiée
+                            </span>
+                        {% endif %}
+                        <span class="bg-primary-100 dark:bg-primary-900/30 text-primary-800 dark:text-primary-400 text-xs px-3 py-1 rounded-full">
+                            <i class="fas fa-calendar mr-1"></i>{{ maid.created_at.strftime('%d/%m/%Y') }}
+                        </span>
+                    </div>
+                    
+                    <!-- Note -->
+                    <div class="flex items-center justify-center mt-4">
+                        <div class="flex items-center">
+                            {% for i in range(5) %}
+                                {% if i < maid.rating|round(0, 'floor')|int %}
+                                    <i class="fas fa-star text-yellow-400"></i>
+                                {% elif i < maid.rating|round(0, 'ceil')|int and maid.rating % 1 >= 0.5 %}
+                                    <i class="fas fa-star-half-alt text-yellow-400"></i>
+                                {% else %}
+                                    <i class="far fa-star text-yellow-400"></i>
+                                {% endif %}
+                            {% endfor %}
+                            <span class="ml-2 font-semibold text-gray-900 dark:text-white">{{ "%.1f"|format(maid.rating) }}/5</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <hr class="border-gray-200 dark:border-gray-700">
+                
+                <!-- Infos rapides -->
+                <div class="p-6 space-y-4">
+                    <div class="flex items-center">
+                        <div class="w-8 text-primary-500"><i class="fas fa-map-marker-alt"></i></div>
+                        <span class="text-gray-700 dark:text-gray-300">{{ maid.city }}</span>
+                    </div>
+                    <div class="flex items-center">
+                        <div class="w-8 text-primary-500"><i class="fas fa-tag"></i></div>
+                        <span class="text-gray-700 dark:text-gray-300 font-semibold">{{ "%.0f"|format(maid.hourly_rate) }} DH/heure</span>
+                    </div>
+                    <div class="flex items-center">
+                        <div class="w-8 text-primary-500"><i class="fas fa-language"></i></div>
+                        <span class="text-gray-700 dark:text-gray-300">{{ maid.languages or 'Non spécifié' }}</span>
+                    </div>
+                    <div class="flex items-center">
+                        <div class="w-8 text-primary-500"><i class="fas fa-phone"></i></div>
+                        <span class="text-gray-700 dark:text-gray-300">{{ maid.phone[:4] + '****' + maid.phone[-2:] if maid.phone else 'Non communiqué' }}</span>
+                    </div>
+                    <div class="flex items-center">
+                        <div class="w-8 text-primary-500"><i class="fas fa-circle"></i></div>
+                        <span class="{% if maid.is_available %}text-success-600 dark:text-success-400{% else %}text-danger-600 dark:text-danger-400{% endif %} font-medium">
+                            {% if maid.is_available %}Disponible{% else %}Indisponible{% endif %}
+                        </span>
+                    </div>
+                </div>
+                
+                <hr class="border-gray-200 dark:border-gray-700">
+                
+                <!-- Actions -->
+                <div class="p-6 space-y-3">
+                    {% if current_user.is_authenticated and current_user.role == 'client' %}
+                        <form method="POST" action="{{ url_for('toggle_favorite', maid_id=user.id) }}">
+                            <button type="submit" class="w-full py-3 rounded-lg font-medium transition flex items-center justify-center
+                                {% if is_favorite %}
+                                    bg-secondary-100 dark:bg-secondary-900/30 text-secondary-700 dark:text-secondary-400 hover:bg-secondary-200
+                                {% else %}
+                                    border-2 border-secondary-500 text-secondary-600 dark:text-secondary-400 hover:bg-secondary-50 dark:hover:bg-secondary-900/20
+                                {% endif %}">
+                                <i class="{% if is_favorite %}fas{% else %}far{% endif %} fa-heart mr-2"></i>
+                                {% if is_favorite %}Retirer des favoris{% else %}Ajouter aux favoris{% endif %}
+                            </button>
+                        </form>
+                        
+                        <a href="{{ url_for('contact_maid', maid_id=user.id) }}" class="block w-full bg-primary-600 hover:bg-primary-700 text-white py-3 rounded-lg font-medium transition text-center">
+                            <i class="fas fa-paper-plane mr-2"></i>Contacter
+                        </a>
+                    {% elif not current_user.is_authenticated %}
+                        <a href="{{ url_for('login') }}" class="block w-full bg-primary-600 hover:bg-primary-700 text-white py-3 rounded-lg font-medium transition text-center">
+                            <i class="fas fa-sign-in-alt mr-2"></i>Connectez-vous pour contacter
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Colonne de droite - Détails -->
+        <div class="lg:col-span-2 space-y-6">
+            <!-- Compétences -->
+            <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+                <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
+                    <i class="fas fa-tools text-primary-500 mr-3"></i>Compétences
+                </h2>
+                <div class="flex flex-wrap gap-2">
+                    {% if maid.skills %}
+                        {% for skill in maid.skills.split(',') %}
+                            <span class="px-4 py-2 bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300 rounded-full text-sm">
+                                {{ skill.strip() }}
+                            </span>
+                        {% endfor %}
+                    {% else %}
+                        <p class="text-gray-500 dark:text-gray-400">Non spécifié</p>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Expérience -->
+            <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+                <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
+                    <i class="fas fa-briefcase text-primary-500 mr-3"></i>Expérience
+                </h2>
+                <div class="prose dark:prose-invert max-w-none">
+                    <p class="text-gray-700 dark:text-gray-300 whitespace-pre-line">{{ maid.experience or 'Non spécifié' }}</p>
+                </div>
+            </div>
+            
+            <!-- Disponibilités -->
+            <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+                <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
+                    <i class="fas fa-calendar-alt text-primary-500 mr-3"></i>Disponibilités
+                </h2>
+                <div class="grid grid-cols-7 gap-2 text-center">
+                    {% set days = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'] %}
+                    {% for day in days %}
+                        <div class="p-3 rounded-lg {% if maid.is_available %}bg-success-50 dark:bg-success-900/20 text-success-700 dark:text-success-400{% else %}bg-gray-100 dark:bg-gray-700 text-gray-500{% endif %}">
+                            <span class="font-medium">{{ day }}</span>
+                        </div>
+                    {% endfor %}
+                </div>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mt-4 text-center">
+                    <i class="fas fa-info-circle mr-1"></i>
+                    Contactez pour confirmer les horaires exacts
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

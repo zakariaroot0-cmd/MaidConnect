@@ -2,7 +2,18 @@ from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, SubmitField, SelectField, TextAreaField, FloatField, BooleanField
 from wtforms.validators import DataRequired, Email, EqualTo, Length, ValidationError
 from app.models import User
+from flask_wtf.file import FileField, FileAllowed
 
+class MaidProfileForm(FlaskForm):
+    full_name = StringField('Nom complet', validators=[DataRequired()])
+    phone = StringField('Téléphone', validators=[DataRequired()])
+    city = StringField('Ville', validators=[DataRequired()])
+    hourly_rate = FloatField('Tarif horaire (DH)', validators=[DataRequired()])
+    languages = StringField('Langues parlées (ex: Français, Arabe)', validators=[DataRequired()])
+    experience = TextAreaField('Expérience professionnelle')
+    skills = TextAreaField('Compétences (cuisine, ménage, garde d\'enfants...)')
+    profile_picture = FileField('Photo de profil', validators=[FileAllowed(['jpg', 'png', 'jpeg', 'gif'], 'Images uniquement!')])
+    submit = SubmitField('Compléter mon profil')
 class RegistrationForm(FlaskForm):
     email = StringField('Email', validators=[DataRequired(), Email()])
     password = PasswordField('Mot de passe', validators=[DataRequired(), Length(min=6)])
@@ -48,6 +59,7 @@ class ReviewForm(FlaskForm):
                                           (1, '★☆☆☆☆ (1)')], validators=[DataRequired()])
     comment = TextAreaField('Commentaire (optionnel)')
     submit = SubmitField('Donner mon avis')
+
 class AdminVerifyMaidForm(FlaskForm):
     is_verified = SelectField('Statut de vérification', 
                              choices=[('pending', 'En attente'), 
@@ -61,8 +73,4 @@ class AdminUserForm(FlaskForm):
     role = SelectField('Rôle', choices=[('client', 'Client'), 
                                         ('maid', 'Aide ménagère'),
                                         ('admin', 'Administrateur')])
-    submit = SubmitField('Mettre à jour')
-
-class AdminReviewModerationForm(FlaskForm):
-    is_visible = BooleanField('Avis visible', default=True)
     submit = SubmitField('Mettre à jour')

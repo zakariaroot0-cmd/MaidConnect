@@ -1,12 +1,28 @@
-from flask import render_template, redirect, url_for, flash, request
+import os
+import secrets
+from PIL import Image
+from flask import render_template, redirect, url_for, flash, request, current_app
 from flask_login import login_user, logout_user, current_user, login_required
 from app import db, bcrypt
 from app.models import User, MaidProfile, ClientProfile, Favorite, ContactRequest, Message, Review
-from app.forms import (RegistrationForm, LoginForm, MaidProfileForm, ContactRequestForm, 
-                       MessageForm, ReviewForm, AdminUserForm, AdminVerifyMaidForm, 
-                       AdminReviewModerationForm)
+from app.forms import (RegistrationForm, LoginForm, MaidProfileForm, 
+                       ContactRequestForm, MessageForm, ReviewForm,
+                       AdminVerifyMaidForm, AdminUserForm)
 
 def init_routes(app):
+    
+    def save_picture(form_picture):
+        random_hex = secrets.token_hex(8)
+        _, f_ext = os.path.splitext(form_picture.filename)
+        picture_fn = random_hex + f_ext
+        picture_path = os.path.join(current_app.root_path, 'static/uploads', picture_fn)
+        
+        output_size = (300, 300)
+        i = Image.open(form_picture)
+        i.thumbnail(output_size)
+        i.save(picture_path)
+        
+        return picture_fn
     
     @app.route('/')
     def index():
@@ -68,7 +84,7 @@ def init_routes(app):
             return redirect(url_for('admin_dashboard'))
         elif current_user.role == 'maid':
             return redirect(url_for('maid_dashboard'))
-        else:  # client
+        else:
             return redirect(url_for('client_dashboard'))
     
     @app.route('/complete-maid-profile', methods=['GET', 'POST'])
@@ -101,7 +117,6 @@ def init_routes(app):
     @app.route('/complete-client-profile')
     @login_required
     def complete_client_profile():
-        # Version simplifiée pour l'instant
         if current_user.client_profile:
             return redirect(url_for('dashboard'))
         
@@ -113,7 +128,6 @@ def init_routes(app):
     
     @app.route('/maids')
     def browse_maids():
-        """Page de recherche publique des maids"""
         city = request.args.get('city', '')
         min_rate = request.args.get('min_rate', type=float)
         max_rate = request.args.get('max_rate', type=float)
@@ -137,11 +151,9 @@ def init_routes(app):
     
     @app.route('/maid/<int:maid_id>')
     def maid_profile(maid_id):
-        """Profil public d'une aide ménagère"""
         maid_profile = MaidProfile.query.get_or_404(maid_id)
         user = User.query.get(maid_profile.user_id)
         
-        # Vérifier si c'est dans les favoris du client connecté
         is_favorite = False
         if current_user.is_authenticated and current_user.role == 'client':
             favorite = Favorite.query.filter_by(
@@ -158,7 +170,6 @@ def init_routes(app):
     @app.route('/favorite/<int:maid_id>', methods=['POST'])
     @login_required
     def toggle_favorite(maid_id):
-        """Ajouter/Retirer une maid des favoris"""
         if current_user.role != 'client':
             flash('Seuls les clients peuvent ajouter des favoris.', 'danger')
             return redirect(url_for('browse_maids'))
@@ -188,7 +199,6 @@ def init_routes(app):
         if not current_user.client_profile:
             return redirect(url_for('complete_client_profile'))
         
-        # Récupérer les favoris du client
         favorites = Favorite.query.filter_by(client_id=current_user.id).all()
         favorite_maids = []
         for fav in favorites:
@@ -196,7 +206,6 @@ def init_routes(app):
             if maid_user and maid_user.maid_profile:
                 favorite_maids.append(maid_user.maid_profile)
         
-        # Récupérer les demandes de contact
         requests = ContactRequest.query.filter_by(client_id=current_user.id).order_by(
             ContactRequest.created_at.desc()
         ).limit(10).all()
@@ -214,7 +223,6 @@ def init_routes(app):
         if not current_user.maid_profile:
             return redirect(url_for('complete_maid_profile'))
         
-        # Récupérer les demandes reçues
         requests = ContactRequest.query.filter_by(maid_id=current_user.id).order_by(
             ContactRequest.created_at.desc()
         ).limit(10).all()
@@ -223,29 +231,9 @@ def init_routes(app):
                              profile=current_user.maid_profile,
                              requests=requests)
     
-    @app.route('/admin/dashboard')
-    @login_required
-    def admin_dashboard():
-        if current_user.role != 'admin':
-            flash('Accès réservé aux administrateurs.', 'danger')
-            return redirect(url_for('dashboard'))
-        
-        # Statistiques simples
-        total_users = User.query.count()
-        total_maids = User.query.filter_by(role='maid').count()
-        total_clients = User.query.filter_by(role='client').count()
-        pending_maids = MaidProfile.query.filter_by(is_available=True).count()
-        
-        return render_template('admin/dashboard.html',
-                             total_users=total_users,
-                             total_maids=total_maids,
-                             total_clients=total_clients,
-                             pending_maids=pending_maids)
-
     @app.route('/contact/<int:maid_id>', methods=['GET', 'POST'])
     @login_required
     def contact_maid(maid_id):
-        """Envoyer une demande de contact à une maid"""
         if current_user.role != 'client':
             flash('Seuls les clients peuvent contacter les aides ménagères.', 'danger')
             return redirect(url_for('browse_maids'))
@@ -255,7 +243,6 @@ def init_routes(app):
             flash('Utilisateur invalide.', 'danger')
             return redirect(url_for('browse_maids'))
         
-        # Vérifier si une demande existe déjà
         existing_request = ContactRequest.query.filter_by(
             client_id=current_user.id,
             maid_id=maid_id,
@@ -268,16 +255,16 @@ def init_routes(app):
         
         form = ContactRequestForm()
         if form.validate_on_submit():
-            request = ContactRequest(
+            contact_request = ContactRequest(
                 client_id=current_user.id,
                 maid_id=maid_id,
                 message=form.message.data
             )
-            db.session.add(request)
+            db.session.add(contact_request)
             db.session.commit()
             
             flash('Demande envoyée avec succès !', 'success')
-            return redirect(url_for('view_request', request_id=request.id))
+            return redirect(url_for('view_request', request_id=contact_request.id))
         
         return render_template('contact_request.html', 
                              form=form, 
@@ -286,11 +273,9 @@ def init_routes(app):
     @app.route('/request/<int:request_id>')
     @login_required
     def view_request(request_id):
-        """Voir les détails d'une demande de contact"""
-        request = ContactRequest.query.get_or_404(request_id)
+        contact_request = ContactRequest.query.get_or_404(request_id)
         
-        # Vérifier les permissions
-        if current_user.id not in [request.client_id, request.maid_id]:
+        if current_user.id not in [contact_request.client_id, contact_request.maid_id]:
             flash('Accès non autorisé.', 'danger')
             return redirect(url_for('dashboard'))
         
@@ -301,27 +286,26 @@ def init_routes(app):
         form = MessageForm()
         
         return render_template('view_request.html', 
-                             request=request,
+                             request=contact_request,
                              messages=messages,
                              form=form)
     
     @app.route('/request/<int:request_id>/message', methods=['POST'])
     @login_required
     def send_message(request_id):
-        """Envoyer un message dans une conversation"""
-        request = ContactRequest.query.get_or_404(request_id)
+        contact_request = ContactRequest.query.get_or_404(request_id)
         
-        if current_user.id not in [request.client_id, request.maid_id]:
+        if current_user.id not in [contact_request.client_id, contact_request.maid_id]:
             flash('Accès non autorisé.', 'danger')
             return redirect(url_for('dashboard'))
         
-        if request.status != 'accepted':
+        if contact_request.status != 'accepted':
             flash('La conversation n\'est pas active.', 'warning')
             return redirect(url_for('view_request', request_id=request_id))
         
         form = MessageForm()
         if form.validate_on_submit():
-            receiver_id = request.maid_id if current_user.id == request.client_id else request.client_id
+            receiver_id = contact_request.maid_id if current_user.id == contact_request.client_id else contact_request.client_id
             
             message = Message(
                 sender_id=current_user.id,
@@ -339,19 +323,18 @@ def init_routes(app):
     @app.route('/request/<int:request_id>/respond', methods=['POST'])
     @login_required
     def respond_request(request_id):
-        """Accepter ou refuser une demande (par la maid)"""
-        request = ContactRequest.query.get_or_404(request_id)
+        contact_request = ContactRequest.query.get_or_404(request_id)
         
-        if current_user.id != request.maid_id:
+        if current_user.id != contact_request.maid_id:
             flash('Action non autorisée.', 'danger')
             return redirect(url_for('dashboard'))
         
         action = request.form.get('action')
         if action == 'accept':
-            request.status = 'accepted'
+            contact_request.status = 'accepted'
             flash('Demande acceptée. Vous pouvez maintenant communiquer.', 'success')
         elif action == 'reject':
-            request.status = 'rejected'
+            contact_request.status = 'rejected'
             flash('Demande refusée.', 'info')
         
         db.session.commit()
@@ -360,15 +343,14 @@ def init_routes(app):
     @app.route('/request/<int:request_id>/complete', methods=['POST'])
     @login_required
     def complete_request(request_id):
-        """Marquer une prestation comme terminée (par le client)"""
-        request = ContactRequest.query.get_or_404(request_id)
+        contact_request = ContactRequest.query.get_or_404(request_id)
         
-        if current_user.id != request.client_id:
+        if current_user.id != contact_request.client_id:
             flash('Action non autorisée.', 'danger')
             return redirect(url_for('dashboard'))
         
-        if request.status == 'accepted':
-            request.status = 'completed'
+        if contact_request.status == 'accepted':
+            contact_request.status = 'completed'
             db.session.commit()
             flash('Prestation marquée comme terminée. Vous pouvez laisser un avis.', 'success')
             return redirect(url_for('leave_review', request_id=request_id))
@@ -378,14 +360,13 @@ def init_routes(app):
     @app.route('/request/<int:request_id>/review', methods=['GET', 'POST'])
     @login_required
     def leave_review(request_id):
-        """Laisser un avis après une prestation"""
-        request = ContactRequest.query.get_or_404(request_id)
+        contact_request = ContactRequest.query.get_or_404(request_id)
         
-        if current_user.id != request.client_id:
+        if current_user.id != contact_request.client_id:
             flash('Action non autorisée.', 'danger')
             return redirect(url_for('dashboard'))
         
-        if request.status != 'completed':
+        if contact_request.status != 'completed':
             flash('Vous ne pouvez laisser un avis que sur une prestation terminée.', 'warning')
             return redirect(url_for('view_request', request_id=request_id))
         
@@ -403,10 +384,9 @@ def init_routes(app):
             )
             db.session.add(review)
             
-            # Mettre à jour la note moyenne de la maid
-            maid_profile = request.maid.maid_profile
+            maid_profile = contact_request.maid.maid_profile
             all_reviews = Review.query.join(ContactRequest).filter(
-                ContactRequest.maid_id == request.maid_id
+                ContactRequest.maid_id == contact_request.maid_id
             ).all()
             
             total_rating = sum(r.rating for r in all_reviews) + review.rating
@@ -416,8 +396,27 @@ def init_routes(app):
             flash('Merci pour votre avis !', 'success')
             return redirect(url_for('view_request', request_id=request_id))
         
-        return render_template('leave_review.html', form=form, request=request)
-        # ========== ROUTES ADMIN ==========
+        return render_template('leave_review.html', form=form, request=contact_request)
+    
+    @app.route('/messages')
+    @login_required
+    def messages():
+        if current_user.role == 'client':
+            requests = ContactRequest.query.filter_by(
+                client_id=current_user.id
+            ).filter(
+                ContactRequest.status.in_(['accepted', 'completed'])
+            ).order_by(ContactRequest.updated_at.desc()).all()
+        else:
+            requests = ContactRequest.query.filter_by(
+                maid_id=current_user.id
+            ).filter(
+                ContactRequest.status.in_(['accepted', 'completed'])
+            ).order_by(ContactRequest.updated_at.desc()).all()
+        
+        return render_template('messages.html', requests=requests)
+    
+    # ========== ROUTES ADMIN ==========
     
     @app.route('/admin/dashboard')
     @login_required
@@ -426,7 +425,6 @@ def init_routes(app):
             flash('Accès réservé aux administrateurs.', 'danger')
             return redirect(url_for('dashboard'))
         
-        # Statistiques
         total_users = User.query.count()
         total_maids = User.query.filter_by(role='maid').count()
         total_clients = User.query.filter_by(role='client').count()
@@ -436,15 +434,14 @@ def init_routes(app):
         active_requests = ContactRequest.query.filter_by(status='accepted').count()
         total_reviews = Review.query.count()
         
-        # Données pour graphique (inscriptions par mois)
         from sqlalchemy import func
         monthly_users = db.session.query(
             func.strftime('%Y-%m', User.created_at).label('month'),
             func.count(User.id).label('count')
         ).group_by('month').order_by('month').limit(12).all()
         
-        months = [m[0] for m in monthly_users]
-        counts = [m[1] for m in monthly_users]
+        months = [m[0] for m in monthly_users] if monthly_users else []
+        counts = [m[1] for m in monthly_users] if monthly_users else []
         
         return render_template('admin/dashboard.html',
                              total_users=total_users,
@@ -539,7 +536,6 @@ def init_routes(app):
             flash('Profil mis à jour.', 'success')
             return redirect(url_for('admin_maids'))
         
-        # Statistiques de la maid
         completed_requests = ContactRequest.query.filter_by(
             maid_id=user.id, 
             status='completed'
@@ -555,32 +551,6 @@ def init_routes(app):
                              form=form,
                              completed_requests=completed_requests,
                              reviews=reviews)
-    
-    @app.route('/admin/reviews')
-    @login_required
-    def admin_reviews():
-        if current_user.role != 'admin':
-            return redirect(url_for('dashboard'))
-        
-        page = request.args.get('page', 1, type=int)
-        reviews = Review.query.order_by(Review.created_at.desc()).paginate(
-            page=page, per_page=20
-        )
-        
-        return render_template('admin/reviews.html', reviews=reviews)
-    
-    @app.route('/admin/review/<int:review_id>/toggle', methods=['POST'])
-    @login_required
-    def admin_toggle_review(review_id):
-        if current_user.role != 'admin':
-            return redirect(url_for('dashboard'))
-        
-        review = Review.query.get_or_404(review_id)
-        review.is_visible = not review.is_visible
-        db.session.commit()
-        
-        flash(f'Avis {"visible" if review.is_visible else "masqué"}.', 'success')
-        return redirect(url_for('admin_reviews'))
     
     @app.route('/admin/requests')
     @login_required
@@ -601,22 +571,16 @@ def init_routes(app):
         )
         
         return render_template('admin/requests.html', requests=requests)
-    @app.route('/messages')
+    
+    @app.route('/admin/reviews')
     @login_required
-    def messages():
-        """Voir toutes les conversations"""
-        # Récupérer toutes les demandes actives
-        if current_user.role == 'client':
-            requests = ContactRequest.query.filter_by(
-                client_id=current_user.id
-            ).filter(
-                ContactRequest.status.in_(['accepted', 'completed'])
-            ).order_by(ContactRequest.updated_at.desc()).all()
-        else:  # maid
-            requests = ContactRequest.query.filter_by(
-                maid_id=current_user.id
-            ).filter(
-                ContactRequest.status.in_(['accepted', 'completed'])
-            ).order_by(ContactRequest.updated_at.desc()).all()
+    def admin_reviews():
+        if current_user.role != 'admin':
+            return redirect(url_for('dashboard'))
         
-        return render_template('messages.html', requests=requests)
+        page = request.args.get('page', 1, type=int)
+        reviews = Review.query.order_by(Review.created_at.desc()).paginate(
+            page=page, per_page=20
+        )
+        
+        return render_template('admin/reviews.html', reviews=reviews)

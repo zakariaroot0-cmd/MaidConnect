@@ -1,5 +1,197 @@
 {% extends "base.html" %}
+
+{% block title %}Accueil{% endblock %}
+
 {% block content %}
-<h1>Bienvenue sur MaidConnect</h1>
-<p>Trouvez l'aide ménagère idéale près de chez vous.</p>
+<!-- Hero Section -->
+<section class="relative bg-gradient-to-br from-primary-50 via-white to-secondary-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 py-20 lg:py-32">
+    <div class="absolute inset-0 overflow-hidden">
+        <div class="absolute -top-40 -right-40 w-80 h-80 bg-primary-300 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-pulse-slow"></div>
+        <div class="absolute -bottom-40 -left-40 w-80 h-80 bg-secondary-300 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-pulse-slow"></div>
+    </div>
+    
+    <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="grid lg:grid-cols-2 gap-12 items-center">
+            <div class="animate-slide-up">
+                <h1 class="text-4xl lg:text-6xl font-bold text-gray-900 dark:text-white mb-6 leading-tight">
+                    Trouvez l'aide ménagère
+                    <span class="text-gradient">parfaite</span>
+                    <br>près de chez vous
+                </h1>
+                <p class="text-lg text-gray-600 dark:text-gray-400 mb-8">
+                    Des professionnelles vérifiées, disponibles quand vous voulez. 
+                    Réservez en quelques clics et profitez d'un intérieur impeccable.
+                </p>
+                
+                <!-- Search Box -->
+                <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 backdrop-blur-sm bg-opacity-90">
+                    <form action="{{ url_for('browse_maids') }}" method="GET" class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                <i class="fas fa-map-marker-alt mr-2 text-primary-500"></i>Où ?
+                            </label>
+                            <input type="text" name="city" placeholder="Ville ou code postal" 
+                                   class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-2 focus:ring-primary-500">
+                        </div>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                    <i class="fas fa-calendar mr-2 text-primary-500"></i>Quand ?
+                                </label>
+                                <select name="availability" class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg">
+                                    <option value="">Cette semaine</option>
+                                    <option value="weekend">Ce week-end</option>
+                                    <option value="regular">Régulier</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                    <i class="fas fa-clock mr-2 text-primary-500"></i>Budget
+                                </label>
+                                <select name="max_rate" class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg">
+                                    <option value="">Tous les tarifs</option>
+                                    <option value="50">Jusqu'à 50 DH/h</option>
+                                    <option value="100">50-100 DH/h</option>
+                                    <option value="150">100-150 DH/h</option>
+                                </select>
+                            </div>
+                        </div>
+                        <button type="submit" class="w-full btn-primary">
+                            <i class="fas fa-search mr-2"></i>Rechercher une aide
+                        </button>
+                    </form>
+                </div>
+                
+                <!-- Trust badges -->
+                <div class="flex items-center space-x-6 mt-6">
+                    <div class="flex -space-x-2">
+                        <div class="w-10 h-10 rounded-full border-2 border-white bg-primary-500 flex items-center justify-center text-white font-bold">A</div>
+                        <div class="w-10 h-10 rounded-full border-2 border-white bg-secondary-500 flex items-center justify-center text-white font-bold">F</div>
+                        <div class="w-10 h-10 rounded-full border-2 border-white bg-success-500 flex items-center justify-center text-white font-bold">K</div>
+                        <div class="w-10 h-10 rounded-full border-2 border-white bg-warning-500 flex items-center justify-center text-white font-bold">S</div>
+                    </div>
+                    <div>
+                        <div class="flex items-center">
+                            <i class="fas fa-star text-yellow-400 text-sm"></i>
+                            <i class="fas fa-star text-yellow-400 text-sm"></i>
+                            <i class="fas fa-star text-yellow-400 text-sm"></i>
+                            <i class="fas fa-star text-yellow-400 text-sm"></i>
+                            <i class="fas fa-star text-yellow-400 text-sm"></i>
+                            <span class="ml-2 text-sm font-semibold text-gray-700 dark:text-gray-300">4.9/5</span>
+                        </div>
+                        <p class="text-sm text-gray-500 dark:text-gray-400">+1000 clients satisfaits</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="hidden lg:block animate-fade-in">
+                <div class="relative">
+                    <div class="absolute inset-0 bg-gradient-to-r from-primary-500 to-secondary-500 rounded-3xl blur-2xl opacity-20"></div>
+                    <div class="relative rounded-3xl shadow-2xl bg-gradient-to-br from-primary-400 to-secondary-400 h-96 flex items-center justify-center">
+                        <div class="text-center text-white">
+                            <i class="fas fa-broom text-8xl mb-4"></i>
+                            <p class="text-2xl font-bold">Service de qualité</p>
+                            <p class="text-lg opacity-90">Professionnelles vérifiées</p>
+                        </div>
+                    </div>
+                    <div class="absolute -bottom-6 -left-6 bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-4 animate-bounce-slow">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-12 h-12 bg-green-100 dark:bg-green-900 rounded-full flex items-center justify-center">
+                                <i class="fas fa-check-circle text-green-600 dark:text-green-400 text-xl"></i>
+                            </div>
+                            <div>
+                                <p class="font-semibold text-gray-900 dark:text-white">Vérifié</p>
+                                <p class="text-sm text-gray-500 dark:text-gray-400">Profils certifiés</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Features Section -->
+<section class="py-20 bg-white dark:bg-gray-900">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="text-center mb-16">
+            <h2 class="text-3xl lg:text-4xl font-bold text-gray-900 dark:text-white mb-4">
+                Pourquoi choisir <span class="text-gradient">MaidConnect</span> ?
+            </h2>
+            <p class="text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
+                Une plateforme sécurisée qui simplifie la mise en relation entre particuliers et aides ménagères
+            </p>
+        </div>
+        
+        <div class="grid md:grid-cols-3 gap-8">
+            <div class="text-center p-6 rounded-2xl bg-gray-50 dark:bg-gray-800 card-hover">
+                <div class="w-16 h-16 bg-primary-100 dark:bg-primary-900 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <i class="fas fa-shield-alt text-2xl text-primary-600 dark:text-primary-400"></i>
+                </div>
+                <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-3">Profils vérifiés</h3>
+                <p class="text-gray-600 dark:text-gray-400">Toutes nos aides ménagères sont vérifiées manuellement pour votre sécurité</p>
+            </div>
+            
+            <div class="text-center p-6 rounded-2xl bg-gray-50 dark:bg-gray-800 card-hover">
+                <div class="w-16 h-16 bg-secondary-100 dark:bg-secondary-900 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <i class="fas fa-comments text-2xl text-secondary-600 dark:text-secondary-400"></i>
+                </div>
+                <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-3">Messagerie intégrée</h3>
+                <p class="text-gray-600 dark:text-gray-400">Communiquez facilement et en toute sécurité avec votre aide ménagère</p>
+            </div>
+            
+            <div class="text-center p-6 rounded-2xl bg-gray-50 dark:bg-gray-800 card-hover">
+                <div class="w-16 h-16 bg-success-100 dark:bg-success-900 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <i class="fas fa-star text-2xl text-success-600 dark:text-success-400"></i>
+                </div>
+                <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-3">Avis vérifiés</h3>
+                <p class="text-gray-600 dark:text-gray-400">Consultez les avis laissés par d'autres clients pour faire le bon choix</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Stats Section -->
+<section class="py-20 bg-gradient-to-r from-primary-600 to-secondary-600">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
+            <div>
+                <div class="text-4xl font-bold text-white mb-2">500+</div>
+                <div class="text-primary-100">Aides ménagères</div>
+            </div>
+            <div>
+                <div class="text-4xl font-bold text-white mb-2">2000+</div>
+                <div class="text-primary-100">Clients satisfaits</div>
+            </div>
+            <div>
+                <div class="text-4xl font-bold text-white mb-2">98%</div>
+                <div class="text-primary-100">Taux de satisfaction</div>
+            </div>
+            <div>
+                <div class="text-4xl font-bold text-white mb-2">24/7</div>
+                <div class="text-primary-100">Support client</div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- CTA Section -->
+<section class="py-20 bg-gray-50 dark:bg-gray-800">
+    <div class="max-w-4xl mx-auto text-center px-4 sm:px-6 lg:px-8">
+        <h2 class="text-3xl lg:text-4xl font-bold text-gray-900 dark:text-white mb-4">
+            Prêt à trouver votre aide ménagère ?
+        </h2>
+        <p class="text-lg text-gray-600 dark:text-gray-400 mb-8">
+            Rejoignez des milliers de personnes qui nous font confiance pour leur domicile
+        </p>
+        <div class="flex flex-col sm:flex-row gap-4 justify-center">
+            <a href="{{ url_for('register') }}" class="btn-primary text-lg">
+                <i class="fas fa-user-plus mr-2"></i>Commencer maintenant
+            </a>
+            <a href="{{ url_for('browse_maids') }}" class="btn-secondary text-lg">
+                <i class="fas fa-search mr-2"></i>Parcourir les profils
+            </a>
+        </div>
+    </div>
+</section>
 {% endblock %}

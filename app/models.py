@@ -2,6 +2,10 @@ from app import db, login_manager
 from flask_login import UserMixin
 from datetime import datetime
 
+@login_manager.user_loader
+def load_user(user_id):
+    return User.query.get(int(user_id))
+
 class User(db.Model, UserMixin):
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(120), unique=True, nullable=False)
@@ -9,15 +13,12 @@ class User(db.Model, UserMixin):
     role = db.Column(db.String(20), nullable=False, default='client')
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     is_verified = db.Column(db.Boolean, default=False)
-    is_active = db.Column(db.Boolean, default=True)  # Pour suspendre un compte
+    is_active = db.Column(db.Boolean, default=True)
     last_seen = db.Column(db.DateTime, default=datetime.utcnow)
     
     # Relations
     maid_profile = db.relationship('MaidProfile', backref='user', uselist=False, lazy=True)
     client_profile = db.relationship('ClientProfile', backref='user', uselist=False, lazy=True)
-    
-    def __repr__(self):
-        return f"User('{self.email}', '{self.role}')"
     
     def __repr__(self):
         return f"User('{self.email}', '{self.role}')"
@@ -32,13 +33,13 @@ class MaidProfile(db.Model):
     languages = db.Column(db.String(200))
     experience = db.Column(db.Text)
     skills = db.Column(db.Text)
-    cin_number = db.Column(db.String(20))  # Visible uniquement par admin
+    cin_number = db.Column(db.String(20))
     is_available = db.Column(db.Boolean, default=True)
     rating = db.Column(db.Float, default=0.0)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    verification_documents = db.Column(db.Text)  # URLs des documents
-    admin_notes = db.Column(db.Text)  # Notes internes de l'admin
-    
+    verification_documents = db.Column(db.Text)
+    admin_notes = db.Column(db.Text)
+    profile_picture = db.Column(db.String(500), default=None)
 
 class ClientProfile(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -47,10 +48,6 @@ class ClientProfile(db.Model):
     phone = db.Column(db.String(20))
     address = db.Column(db.String(200))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-
-@login_manager.user_loader
-def load_user(user_id):
-    return User.query.get(int(user_id))
 
 class Favorite(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -65,11 +62,10 @@ class ContactRequest(db.Model):
     client_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     maid_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     message = db.Column(db.Text)
-    status = db.Column(db.String(20), default='pending')  # pending, accepted, rejected
+    status = db.Column(db.String(20), default='pending')
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
-    # Relations
     client = db.relationship('User', foreign_keys=[client_id], backref='sent_requests')
     maid = db.relationship('User', foreign_keys=[maid_id], backref='received_requests')
 
@@ -82,7 +78,6 @@ class Message(db.Model):
     is_read = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
-    # Relations
     sender = db.relationship('User', foreign_keys=[sender_id], backref='sent_messages')
     receiver = db.relationship('User', foreign_keys=[receiver_id], backref='received_messages')
     request = db.relationship('ContactRequest', backref='messages')
@@ -90,9 +85,9 @@ class Message(db.Model):
 class Review(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     request_id = db.Column(db.Integer, db.ForeignKey('contact_request.id'), unique=True, nullable=False)
-    rating = db.Column(db.Integer, nullable=False)  # 1-5 étoiles
+    rating = db.Column(db.Integer, nullable=False)
     comment = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    is_visible = db.Column(db.Boolean, default=True)
     
-    # Relation
     request = db.relationship('ContactRequest', backref='review')
