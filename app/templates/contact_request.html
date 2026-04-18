@@ -1,32 +1,174 @@
 {% extends "base.html" %}
+
+{% block title %}Contacter {{ maid.full_name }}{% endblock %}
+
 {% block content %}
-<div class="row justify-content-center">
-    <div class="col-md-8">
-        <div class="card">
-            <div class="card-header">
-                <h3>Contacter {{ maid.full_name }}</h3>
+<div class="min-h-screen bg-gray-50 dark:bg-gray-900 py-12">
+    <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+        
+        <!-- Breadcrumb -->
+        <nav class="flex mb-6 text-sm">
+            <ol class="flex items-center space-x-2">
+                <li>
+                    <a href="{{ url_for('index') }}" class="text-gray-500 dark:text-gray-400 hover:text-primary-600 transition">
+                        <i class="fas fa-home mr-1"></i>Accueil
+                    </a>
+                </li>
+                <li class="text-gray-400"><i class="fas fa-chevron-right text-xs"></i></li>
+                <li>
+                    <a href="{{ url_for('browse_maids') }}" class="text-gray-500 dark:text-gray-400 hover:text-primary-600 transition">
+                        Aides ménagères
+                    </a>
+                </li>
+                <li class="text-gray-400"><i class="fas fa-chevron-right text-xs"></i></li>
+                <li>
+                    <a href="{{ url_for('maid_profile', maid_id=maid.id) }}" class="text-gray-500 dark:text-gray-400 hover:text-primary-600 transition">
+                        {{ maid.full_name }}
+                    </a>
+                </li>
+                <li class="text-gray-400"><i class="fas fa-chevron-right text-xs"></i></li>
+                <li class="text-gray-900 dark:text-white font-medium">Contacter</li>
+            </ol>
+        </nav>
+        
+        <!-- Carte principale -->
+        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl overflow-hidden">
+            <!-- En-tête avec info de la maid -->
+            <div class="bg-gradient-to-r from-primary-500 to-secondary-500 px-6 py-5">
+                <div class="flex items-center space-x-4">
+                    {% if maid.profile_picture %}
+                        <img src="{{ url_for('static', filename='uploads/' + maid.profile_picture) }}" 
+                             alt="{{ maid.full_name }}" 
+                             class="w-16 h-16 rounded-full object-cover border-3 border-white shadow-lg">
+                    {% else %}
+                        <div class="w-16 h-16 rounded-full bg-white/20 flex items-center justify-center text-white text-2xl font-bold border-3 border-white">
+                            {{ maid.full_name[0].upper() }}
+                        </div>
+                    {% endif %}
+                    <div>
+                        <h1 class="text-2xl font-bold text-white">Contacter {{ maid.full_name }}</h1>
+                        <p class="text-primary-100 text-sm">
+                            <i class="fas fa-map-marker-alt mr-1"></i>{{ maid.city }} • 
+                            <i class="fas fa-tag mr-1"></i>{{ "%.0f"|format(maid.hourly_rate) }} DH/h
+                        </p>
+                    </div>
+                </div>
             </div>
-            <div class="card-body">
-                <div class="alert alert-info">
-                    <p>Vous allez envoyer une demande de contact à {{ maid.full_name }}.</p>
-                    <p>Si elle accepte, vous pourrez échanger vos coordonnées.</p>
+            
+            <!-- Corps du formulaire -->
+            <div class="p-6 lg:p-8">
+                <!-- Message d'information -->
+                <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4 mb-6">
+                    <div class="flex items-start">
+                        <div class="flex-shrink-0">
+                            <i class="fas fa-info-circle text-blue-600 dark:text-blue-400 text-lg"></i>
+                        </div>
+                        <div class="ml-3">
+                            <p class="text-sm text-blue-800 dark:text-blue-300">
+                                Vous allez envoyer une demande de contact à <strong>{{ maid.full_name }}</strong>.
+                            </p>
+                            <p class="text-sm text-blue-700 dark:text-blue-400 mt-1">
+                                Si elle accepte, vous pourrez échanger vos coordonnées et communiquer librement.
+                            </p>
+                        </div>
+                    </div>
                 </div>
                 
-                <form method="POST">
+                <!-- Formulaire -->
+                <form method="POST" class="space-y-6">
                     {{ form.hidden_tag() }}
-                    <div class="mb-3">
-                        {{ form.message.label(class="form-label") }}
-                        {{ form.message(class="form-control", rows=4, 
-                                      placeholder="Présentez-vous et expliquez vos besoins...") }}
-                        <small class="text-muted">500 caractères maximum</small>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            <i class="fas fa-pencil-alt mr-2 text-primary-500"></i>
+                            Message de présentation
+                            <span class="text-gray-400 text-xs font-normal ml-2">(optionnel)</span>
+                        </label>
+                        
+                        {{ form.message(
+                            class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent transition resize-none",
+                            rows="5",
+                            placeholder="Présentez-vous et expliquez vos besoins...\n\nExemple : Bonjour, je cherche une aide ménagère pour un ménage hebdomadaire de 3h. Je suis disponible le samedi matin. Pouvez-vous me dire si cela vous conviendrait ?"
+                        ) }}
+                        
+                        {% if form.message.errors %}
+                            <p class="mt-2 text-sm text-danger-600">{{ form.message.errors[0] }}</p>
+                        {% endif %}
+                        
+                        <div class="mt-2 flex justify-between items-center">
+                            <p class="text-xs text-gray-500 dark:text-gray-400">
+                                <i class="fas fa-info-circle mr-1"></i>
+                                500 caractères maximum
+                            </p>
+                            <p class="text-xs text-gray-500 dark:text-gray-400">
+                                <span id="charCount">0</span> / 500
+                            </p>
+                        </div>
                     </div>
-                    <div class="d-flex justify-content-between">
-                        <a href="{{ url_for('maid_profile', maid_id=maid.id) }}" class="btn btn-secondary">Annuler</a>
-                        {{ form.submit(class="btn btn-primary") }}
+                    
+                    <!-- Conseils -->
+                    <div class="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-4">
+                        <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            <i class="fas fa-lightbulb text-yellow-500 mr-2"></i>Conseils pour une bonne demande
+                        </h3>
+                        <ul class="text-xs text-gray-600 dark:text-gray-400 space-y-1">
+                            <li>• Soyez précis sur vos besoins (type de ménage, fréquence, durée)</li>
+                            <li>• Mentionnez vos disponibilités</li>
+                            <li>• Indiquez si vous avez des demandes particulières (animaux, produits spécifiques...)</li>
+                        </ul>
+                    </div>
+                    
+                    <!-- Boutons d'action -->
+                    <div class="flex flex-col sm:flex-row gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+                        <a href="{{ url_for('maid_profile', maid_id=maid.id) }}" 
+                           class="px-6 py-3 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition text-center">
+                            <i class="fas fa-arrow-left mr-2"></i>Annuler
+                        </a>
+                        
+                        {{ form.submit(class="flex-1 px-6 py-3 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-medium transition transform hover:scale-[1.02] shadow-lg shadow-primary-200 dark:shadow-primary-900/30 cursor-pointer") }}
                     </div>
                 </form>
             </div>
         </div>
+        
+        <!-- Rappel du profil -->
+        <div class="mt-6 text-center">
+            <a href="{{ url_for('maid_profile', maid_id=maid.id) }}" 
+               class="text-gray-500 dark:text-gray-400 hover:text-primary-600 text-sm">
+                <i class="fas fa-arrow-left mr-1"></i>Retour au profil de {{ maid.full_name }}
+            </a>
+        </div>
     </div>
 </div>
+
+<!-- Script pour le compteur de caractères -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const textarea = document.querySelector('textarea[name="message"]');
+    const charCount = document.getElementById('charCount');
+    
+    if (textarea && charCount) {
+        const updateCount = function() {
+            const count = textarea.value.length;
+            charCount.textContent = count;
+            
+            if (count > 450) {
+                charCount.classList.add('text-warning-600');
+            } else {
+                charCount.classList.remove('text-warning-600');
+            }
+            
+            if (count > 500) {
+                charCount.classList.add('text-danger-600');
+                charCount.classList.remove('text-warning-600');
+            } else if (count <= 450) {
+                charCount.classList.remove('text-danger-600', 'text-warning-600');
+            }
+        };
+        
+        textarea.addEventListener('input', updateCount);
+        updateCount(); // Initialisation
+    }
+});
+</script>
 {% endblock %}

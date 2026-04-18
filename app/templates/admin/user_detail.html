@@ -111,4 +111,19 @@
         </div>
     </div>
 </div>
+<!-- Dans la section des actions -->
+<div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+    <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Actions</h2>
+    
+    <div class="space-y-3">
+        <!-- ... autres actions ... -->
+        
+        {% if user.id != current_user.id %}
+            <button onclick="confirmDelete('{{ user.id }}', '{{ user.email }}')" 
+                    class="w-full px-4 py-3 border border-danger-500 text-danger-600 hover:bg-danger-50 dark:hover:bg-danger-900/20 rounded-lg transition text-left">
+                <i class="fas fa-trash-alt mr-2"></i>Supprimer ce compte
+            </button>
+        {% endif %}
+    </div>
+</div>
 {% endblock %}

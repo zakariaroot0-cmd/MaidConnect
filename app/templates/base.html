@@ -251,10 +251,12 @@
                 </div>
                 <div>
                     <h3 class="font-semibold text-gray-900 dark:text-white mb-4">Légal</h3>
-                    <ul class="space-y-2">
-                        <li><a href="#" class="text-gray-600 dark:text-gray-400 hover:text-primary-600 text-sm">Confidentialité</a></li>
-                        <li><a href="#" class="text-gray-600 dark:text-gray-400 hover:text-primary-600 text-sm">Conditions</a></li>
-                        <li><a href="#" class="text-gray-600 dark:text-gray-400 hover:text-primary-600 text-sm">Cookies</a></li>
+<ul class="space-y-2">
+    <li><a href="{{ url_for('legal_mentions') }}" class="text-gray-600 dark:text-gray-400 hover:text-primary-600 text-sm">Mentions légales</a></li>
+    <li><a href="{{ url_for('legal_privacy') }}" class="text-gray-600 dark:text-gray-400 hover:text-primary-600 text-sm">Confidentialité</a></li>
+    <li><a href="{{ url_for('legal_terms') }}" class="text-gray-600 dark:text-gray-400 hover:text-primary-600 text-sm">Conditions</a></li>
+    <li><a href="{{ url_for('legal_cookies') }}" class="text-gray-600 dark:text-gray-400 hover:text-primary-600 text-sm">Cookies</a></li>
+</ul>
                     </ul>
                 </div>
             </div>

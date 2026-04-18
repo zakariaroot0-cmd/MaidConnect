@@ -12,9 +12,14 @@
             </h1>
             <p class="text-gray-600 dark:text-gray-400">Gérez tous les comptes de la plateforme</p>
         </div>
-        <a href="{{ url_for('admin_dashboard') }}" class="text-gray-600 dark:text-gray-400 hover:text-primary-600 transition">
-            <i class="fas fa-arrow-left mr-2"></i>Retour au dashboard
-        </a>
+        <div class="flex items-center space-x-3">
+            <a href="{{ url_for('export_users') }}" class="px-4 py-2 bg-success-600 hover:bg-success-700 text-white rounded-lg transition text-sm">
+                <i class="fas fa-download mr-2"></i>Exporter CSV
+            </a>
+            <a href="{{ url_for('admin_dashboard') }}" class="text-gray-600 dark:text-gray-400 hover:text-primary-600 transition">
+                <i class="fas fa-arrow-left mr-2"></i>Retour
+            </a>
+        </div>
     </div>
     
     <!-- Filtres -->
@@ -95,10 +100,26 @@
                             {{ user.created_at.strftime('%d/%m/%Y') }}
                         </td>
                         <td class="px-6 py-4">
-                            <a href="{{ url_for('admin_user_detail', user_id=user.id) }}" 
-                               class="text-primary-600 hover:text-primary-700 font-medium text-sm">
-                                <i class="fas fa-edit mr-1"></i>Gérer
-                            </a>
+                            <div class="flex items-center space-x-3">
+                                <a href="{{ url_for('admin_user_detail', user_id=user.id) }}" 
+                                   class="text-primary-600 hover:text-primary-700 font-medium text-sm">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                
+                                {% if user.id != current_user.id %}
+                                    <button onclick="confirmDelete('{{ user.id }}', '{{ user.email }}')" 
+                                            class="text-danger-600 hover:text-danger-700 font-medium text-sm">
+                                        <i class="fas fa-trash-alt"></i>
+                                    </button>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="7" class="px-6 py-12 text-center text-gray-500 dark:text-gray-400">
+                            <i class="fas fa-users text-4xl mb-3"></i>
+                            <p>Aucun utilisateur trouvé</p>
                         </td>
                     </tr>
                     {% endfor %}
@@ -111,7 +132,7 @@
         <div class="px-6 py-4 border-t border-gray-200 dark:border-gray-700">
             <div class="flex items-center justify-between">
                 <p class="text-sm text-gray-600 dark:text-gray-400">
-                    Page {{ users.page }} sur {{ users.pages }}
+                    Page {{ users.page }} sur {{ users.pages }} • {{ users.total }} résultats
                 </p>
                 <div class="flex space-x-2">
                     {% if users.has_prev %}
@@ -120,7 +141,7 @@
                             <i class="fas fa-chevron-left"></i>
                         </a>
                     {% endif %}
-                    {% for page in users.iter_pages() %}
+                    {% for page in users.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
                         {% if page %}
                             <a href="{{ url_for('admin_users', page=page, **request.args) }}" 
                                class="px-3 py-1 border rounded-lg {% if page == users.page %}bg-primary-600 text-white border-primary-600{% else %}border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700{% endif %}">
@@ -142,4 +163,71 @@
         {% endif %}
     </div>
 </div>
+
+<!-- Modal de confirmation de suppression -->
+<div id="deleteModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 backdrop-blur-sm">
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-md w-full mx-4 p-6">
+        <div class="text-center">
+            <div class="w-16 h-16 bg-danger-100 dark:bg-danger-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+                <i class="fas fa-exclamation-triangle text-3xl text-danger-600 dark:text-danger-400"></i>
+            </div>
+            <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-2">
+                Confirmer la suppression
+            </h3>
+            <p class="text-gray-600 dark:text-gray-400 mb-4">
+                Êtes-vous sûr de vouloir supprimer le compte <br>
+                <strong id="deleteEmail" class="text-gray-900 dark:text-white"></strong> ?
+            </p>
+            <p class="text-sm text-danger-600 dark:text-danger-400 mb-6">
+                <i class="fas fa-exclamation-circle mr-1"></i>
+                Cette action est irréversible !
+            </p>
+            
+            <form id="deleteForm" method="POST" class="flex gap-3">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() if csrf_token else '' }}">
+                <button type="button" onclick="closeDeleteModal()" 
+                        class="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition">
+                    Annuler
+                </button>
+                <button type="submit" 
+                        class="flex-1 px-4 py-2 bg-danger-600 hover:bg-danger-700 text-white rounded-lg transition">
+                    <i class="fas fa-trash-alt mr-2"></i>Supprimer
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function confirmDelete(userId, email) {
+    const modal = document.getElementById('deleteModal');
+    const form = document.getElementById('deleteForm');
+    const emailSpan = document.getElementById('deleteEmail');
+    
+    form.action = '/admin/user/' + userId + '/delete';
+    emailSpan.textContent = email;
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+}
+
+function closeDeleteModal() {
+    const modal = document.getElementById('deleteModal');
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+}
+
+// Fermer le modal en cliquant en dehors
+document.getElementById('deleteModal').addEventListener('click', function(e) {
+    if (e.target === this) {
+        closeDeleteModal();
+    }
+});
+
+// Fermer avec la touche Escape
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        closeDeleteModal();
+    }
+});
+</script>
 {% endblock %}

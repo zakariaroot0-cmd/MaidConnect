@@ -28,7 +28,29 @@
             </li>
         </ol>
     </nav>
-    
+    {% if not current_user.is_authenticated %}
+<div class="mt-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-200 dark:border-blue-800">
+    <div class="flex items-start gap-3">
+        <i class="fas fa-info-circle text-blue-600 dark:text-blue-400 text-xl mt-0.5"></i>
+        <div>
+            <p class="text-blue-800 dark:text-blue-300 font-medium mb-1">
+                🔒 Photos protégées
+            </p>
+            <p class="text-blue-700 dark:text-blue-400 text-sm mb-3">
+                Connectez-vous pour voir les photos en clair et contacter cette aide ménagère.
+            </p>
+            <a href="{{ url_for('login') }}" 
+               class="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition">
+                <i class="fas fa-sign-in-alt mr-2"></i>Se connecter
+            </a>
+            <a href="{{ url_for('register') }}" 
+               class="inline-flex items-center px-4 py-2 ml-2 border border-blue-600 text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:border-blue-400 dark:hover:bg-blue-900/30 text-sm font-medium rounded-lg transition">
+                <i class="fas fa-user-plus mr-2"></i>S'inscrire
+            </a>
+        </div>
+    </div>
+</div>
+{% endif %}
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <!-- Colonne de gauche - Carte profil -->
         <div class="lg:col-span-1">
@@ -38,17 +60,49 @@
                 
                 <div class="px-6 pb-6">
                     <!-- Photo -->
-                    <div class="flex justify-center -mt-12 mb-4">
-                        {% if maid.profile_picture %}
-                            <img src="{{ url_for('static', filename='uploads/' + maid.profile_picture) }}" 
-                                 alt="{{ maid.full_name }}" 
-                                 class="w-28 h-28 rounded-full object-cover border-4 border-white dark:border-gray-800 shadow-xl">
-                        {% else %}
-                            <div class="w-28 h-28 rounded-full bg-gradient-to-br from-primary-500 to-secondary-500 flex items-center justify-center text-white text-4xl font-bold border-4 border-white dark:border-gray-800 shadow-xl">
-                                {{ maid.full_name[0].upper() }}
+                    <!-- Grande Photo de profil -->
+                            <div class="relative">
+                                {% if current_user.is_authenticated %}
+                                    {# Utilisateur connecté - Voir la vraie photo #}
+                                    {% if maid.profile_picture %}
+                                        <img src="{{ url_for('static', filename='uploads/' + maid.profile_picture) }}" 
+                                            alt="{{ maid.full_name }}" 
+                                            class="w-44 h-44 lg:w-52 lg:h-52 rounded-2xl object-cover border-4 border-white dark:border-gray-800 shadow-2xl ring-4 ring-primary-100 dark:ring-primary-900">
+                                    {% else %}
+                                        <div class="w-44 h-44 lg:w-52 lg:h-52 rounded-2xl bg-gradient-to-br from-primary-500 to-secondary-500 flex items-center justify-center text-white text-7xl lg:text-8xl font-bold border-4 border-white dark:border-gray-800 shadow-2xl ring-4 ring-primary-100 dark:ring-primary-900">
+                                            {{ maid.full_name[0].upper() }}
+                                        </div>
+                                    {% endif %}
+                                {% else %}
+                                    {# Utilisateur NON connecté - Photo floutée/pixélisée #}
+                                    <div class="relative w-44 h-44 lg:w-52 lg:h-52 rounded-2xl overflow-hidden border-4 border-white dark:border-gray-800 shadow-2xl ring-4 ring-gray-300 dark:ring-gray-700">
+                                        {% if maid.profile_picture %}
+                                            <img src="{{ url_for('static', filename='uploads/' + maid.profile_picture) }}" 
+                                                alt="Photo protégée" 
+                                                class="w-full h-full object-cover blur-xl scale-110 opacity-60">
+                                        {% else %}
+                                            <div class="w-full h-full bg-gradient-to-br from-gray-400 to-gray-600 flex items-center justify-center blur-sm">
+                                                <span class="text-white text-6xl font-bold opacity-40">{{ maid.full_name[0].upper() }}</span>
+                                            </div>
+                                        {% endif %}
+                                        
+                                        {# Overlay avec icône de cadenas #}
+                                        <div class="absolute inset-0 bg-black/30 backdrop-blur-[2px] flex flex-col items-center justify-center">
+                                            <i class="fas fa-lock text-white text-3xl mb-1 opacity-80"></i>
+                                            <span class="text-white text-xs font-medium px-2 py-1 bg-black/40 rounded-full backdrop-blur-sm">
+                                                Connectez-vous
+                                            </span>
+                                        </div>
+                                    </div>
+                                {% endif %}
+                                
+                                {# Indicateur de disponibilité #}
+                                {% if maid.is_available %}
+                                    <span class="absolute bottom-2 right-2 w-6 h-6 bg-green-500 border-4 border-white dark:border-gray-800 rounded-full" title="Disponible"></span>
+                                {% else %}
+                                    <span class="absolute bottom-2 right-2 w-6 h-6 bg-gray-400 border-4 border-white dark:border-gray-800 rounded-full" title="Indisponible"></span>
+                                {% endif %}
                             </div>
-                        {% endif %}
-                    </div>
                     
                     <!-- Nom et badges -->
                     <div class="text-center mb-4">

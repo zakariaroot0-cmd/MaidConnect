@@ -1,77 +1,337 @@
 {% extends "base.html" %}
+
+{% block title %}Conversation - MaidConnect{% endblock %}
+
 {% block content %}
-<div class="row">
-    <div class="col-md-12">
-        <div class="card mb-4">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <h4>
-                    {% if current_user.role == 'client' %}
-                        Conversation avec {{ request.maid.maid_profile.full_name }}
+<div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    
+    {# Définition sécurisée des variables #}
+    {% if current_user.role == 'client' %}
+        {% set other_user = request.maid %}
+        {% set other_profile = request.maid.maid_profile %}
+        {% set other_name = other_profile.full_name if other_profile else other_user.email %}
+        {% set other_initial = other_name[0].upper() if other_name else '?' %}
+        {% set other_city = other_profile.city if other_profile else '' %}
+        {% set other_rating = other_profile.rating if other_profile else 0 %}
+        {% set other_verified = other_user.is_verified %}
+    {% else %}
+        {% set other_user = request.client %}
+        {% set other_profile = request.client.client_profile %}
+        {% set other_name = other_profile.full_name if other_profile else other_user.email %}
+        {% set other_initial = other_name[0].upper() if other_name else '?' %}
+        {% set other_city = '' %}
+        {% set other_rating = 0 %}
+        {% set other_verified = False %}
+    {% endif %}
+    
+    <!-- En-tête avec infos de la conversation -->
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden mb-6">
+        <div class="p-6">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-4">
+                    {% if other_profile and other_profile.profile_picture %}
+                        <img src="{{ url_for('static', filename='uploads/' + other_profile.profile_picture) }}" 
+                             alt="{{ other_name }}" 
+                             class="w-14 h-14 rounded-full object-cover border-2 border-gray-200 dark:border-gray-600">
                     {% else %}
-                        Conversation avec Client #{{ request.client_id }}
-                    {% endif %}
-                </h4>
-                <span class="badge bg-{{ 'success' if request.status == 'accepted' else 'warning' if request.status == 'pending' else 'secondary' }}">
-                    {{ request.status }}
-                </span>
-            </div>
-            <div class="card-body">
-                {% if request.status == 'pending' and current_user.role == 'maid' %}
-                    <div class="alert alert-info">
-                        <h5>Demande en attente de votre réponse</h5>
-                        <p>{{ request.message or 'Aucun message' }}</p>
-                        <form method="POST" action="{{ url_for('respond_request', request_id=request.id) }}" class="mt-3">
-                            <button type="submit" name="action" value="accept" class="btn btn-success">Accepter</button>
-                            <button type="submit" name="action" value="reject" class="btn btn-danger">Refuser</button>
-                        </form>
-                    </div>
-                {% elif request.status == 'accepted' %}
-                    <!-- Zone des messages -->
-                    <div class="messages-container mb-3" style="max-height: 400px; overflow-y: auto;">
-                        {% for msg in messages %}
-                            <div class="message mb-2 p-2 rounded {% if msg.sender_id == current_user.id %}bg-primary text-white ms-auto{% else %}bg-light{% endif %}" 
-                                 style="max-width: 70%; {% if msg.sender_id == current_user.id %}margin-left: auto;{% endif %}">
-                                <p class="mb-1">{{ msg.content }}</p>
-                                <small class="text-{% if msg.sender_id == current_user.id %}white{% else %}muted{% endif %}">
-                                    {{ msg.created_at.strftime('%d/%m/%Y %H:%M') }}
-                                </small>
-                            </div>
-                        {% else %}
-                            <p class="text-center text-muted">Aucun message. Commencez la conversation !</p>
-                        {% endfor %}
-                    </div>
-                    
-                    <!-- Formulaire d'envoi de message -->
-                    <form method="POST" action="{{ url_for('send_message', request_id=request.id) }}">
-                        {{ form.hidden_tag() }}
-                        <div class="input-group">
-                            {{ form.content(class="form-control", placeholder="Votre message...", rows=2) }}
-                            <button type="submit" class="btn btn-primary">Envoyer</button>
+                        <div class="w-14 h-14 rounded-full bg-gradient-to-r from-primary-500 to-secondary-500 flex items-center justify-center text-white text-xl font-bold">
+                            {{ other_initial }}
                         </div>
-                    </form>
-                    
-                    {% if current_user.role == 'client' %}
-                        <form method="POST" action="{{ url_for('complete_request', request_id=request.id) }}" class="mt-3">
-                            <button type="submit" class="btn btn-success">Prestation terminée</button>
-                        </form>
                     {% endif %}
                     
-                {% elif request.status == 'completed' %}
-                    <div class="alert alert-success">
-                        <h5>Prestation terminée</h5>
-                        {% if current_user.role == 'client' and not request.review %}
-                            <a href="{{ url_for('leave_review', request_id=request.id) }}" class="btn btn-primary">
-                                Laisser un avis
-                            </a>
-                        {% elif request.review %}
-                            <p>Votre avis a été enregistré. Note : {{ request.review.rating }}/5</p>
-                        {% endif %}
+                    <div>
+                        <h1 class="text-xl font-bold text-gray-900 dark:text-white">
+                            {% if current_user.role == 'client' %}
+                                Conversation avec {{ other_name }}
+                            {% else %}
+                                Conversation avec {{ other_name }}
+                            {% endif %}
+                        </h1>
+                        <div class="flex items-center space-x-3 mt-1">
+                            <span class="px-3 py-1 rounded-full text-xs font-medium
+                                {% if request.status == 'pending' %}bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400
+                                {% elif request.status == 'accepted' %}bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400
+                                {% elif request.status == 'completed' %}bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400
+                                {% elif request.status == 'rejected' %}bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400
+                                {% endif %}">
+                                {% if request.status == 'pending' %}⏳ En attente
+                                {% elif request.status == 'accepted' %}✅ Acceptée
+                                {% elif request.status == 'completed' %}🏁 Terminée
+                                {% elif request.status == 'rejected' %}❌ Refusée
+                                {% endif %}
+                            </span>
+                            <span class="text-sm text-gray-500 dark:text-gray-400">
+                                <i class="far fa-calendar-alt mr-1"></i>
+                                {{ request.created_at.strftime('%d/%m/%Y') }}
+                            </span>
+                        </div>
                     </div>
-                {% else %}
-                    <p class="text-muted">Demande en attente de réponse.</p>
-                {% endif %}
+                </div>
+                
+                <a href="{{ url_for('dashboard') }}" class="text-gray-500 dark:text-gray-400 hover:text-primary-600 transition">
+                    <i class="fas fa-arrow-left mr-2"></i>Retour
+                </a>
             </div>
         </div>
     </div>
+    
+    <!-- Contenu principal -->
+    <div class="grid lg:grid-cols-3 gap-6">
+        
+        <!-- Zone de messages (2 colonnes) -->
+        <div class="lg:col-span-2">
+            <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+                
+                {% if request.status == 'pending' and current_user.role == 'maid' %}
+                    <!-- Demande en attente pour la maid -->
+                    <div class="p-8">
+                        <div class="text-center mb-6">
+                            <div class="w-20 h-20 bg-yellow-100 dark:bg-yellow-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <i class="fas fa-clock text-4xl text-yellow-600 dark:text-yellow-400"></i>
+                            </div>
+                            <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+                                Demande en attente de votre réponse
+                            </h2>
+                            <p class="text-gray-600 dark:text-gray-400">
+                                Un client souhaite entrer en contact avec vous
+                            </p>
+                        </div>
+                        
+                        {% if request.message %}
+                            <div class="bg-gray-50 dark:bg-gray-700 rounded-xl p-4 mb-6">
+                                <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">Message du client :</p>
+                                <p class="text-gray-800 dark:text-gray-200">{{ request.message }}</p>
+                            </div>
+                        {% endif %}
+                        
+                        <form method="POST" action="{{ url_for('respond_request', request_id=request.id) }}" 
+                              class="flex flex-col sm:flex-row gap-3 justify-center">
+                            <button type="submit" name="action" value="accept" 
+                                    class="px-8 py-3 bg-success-600 hover:bg-success-700 text-white rounded-xl font-medium transition transform hover:scale-105 shadow-lg">
+                                <i class="fas fa-check-circle mr-2"></i>Accepter la demande
+                            </button>
+                            <button type="submit" name="action" value="reject" 
+                                    class="px-8 py-3 border border-danger-500 text-danger-600 hover:bg-danger-50 dark:hover:bg-danger-900/20 rounded-xl font-medium transition">
+                                <i class="fas fa-times-circle mr-2"></i>Refuser
+                            </button>
+                        </form>
+                    </div>
+                    
+                {% elif request.status == 'pending' and current_user.role == 'client' %}
+                    <!-- Demande en attente pour le client -->
+                    <div class="p-8 text-center">
+                        <div class="w-20 h-20 bg-yellow-100 dark:bg-yellow-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <i class="fas fa-hourglass-half text-4xl text-yellow-600 dark:text-yellow-400"></i>
+                        </div>
+                        <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+                            Demande en attente de réponse
+                        </h2>
+                        <p class="text-gray-600 dark:text-gray-400 mb-4">
+                            {{ other_name }} n'a pas encore répondu à votre demande.
+                        </p>
+                        <p class="text-sm text-gray-500 dark:text-gray-400">
+                            Vous serez notifié dès qu'elle répondra.
+                        </p>
+                    </div>
+                    
+                {% elif request.status == 'rejected' %}
+                    <!-- Demande refusée -->
+                    <div class="p-8 text-center">
+                        <div class="w-20 h-20 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <i class="fas fa-times-circle text-4xl text-red-600 dark:text-red-400"></i>
+                        </div>
+                        <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+                            Demande refusée
+                        </h2>
+                        <p class="text-gray-600 dark:text-gray-400">
+                            Cette demande a été refusée.
+                        </p>
+                    </div>
+                    
+                {% elif request.status == 'accepted' or request.status == 'completed' %}
+                    <!-- Conversation active -->
+                    <div class="flex flex-col h-[500px]">
+                        <!-- Messages -->
+                        <div class="flex-1 overflow-y-auto p-4 space-y-4" id="messagesContainer">
+                            {% if messages %}
+                                {% for msg in messages %}
+                                    <div class="flex {% if msg.sender_id == current_user.id %}justify-end{% else %}justify-start{% endif %}">
+                                        <div class="max-w-[75%]">
+                                            <div class="px-4 py-3 rounded-2xl {% if msg.sender_id == current_user.id %}bg-primary-600 text-white{% else %}bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200{% endif %}">
+                                                <p class="whitespace-pre-wrap">{{ msg.content }}</p>
+                                            </div>
+                                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1 {% if msg.sender_id == current_user.id %}text-right{% endif %}">
+                                                {{ msg.created_at.strftime('%H:%M') }}
+                                                {% if msg.sender_id == current_user.id %}
+                                                    <i class="fas fa-check-circle ml-1 text-primary-500"></i>
+                                                {% endif %}
+                                            </p>
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            {% else %}
+                                <div class="text-center py-12">
+                                    <i class="fas fa-comments text-4xl text-gray-300 dark:text-gray-600 mb-3"></i>
+                                    <p class="text-gray-500 dark:text-gray-400">Aucun message. Commencez la conversation !</p>
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        {% if request.status == 'accepted' %}
+                            <!-- Formulaire d'envoi -->
+                            <div class="border-t border-gray-200 dark:border-gray-700 p-4">
+                                <form method="POST" action="{{ url_for('send_message', request_id=request.id) }}" class="flex gap-2">
+                                    {{ form.hidden_tag() }}
+                                    {{ form.content(class="flex-1 px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl focus:ring-2 focus:ring-primary-500 resize-none", rows="1", placeholder="Votre message...") }}
+                                    <button type="submit" class="px-5 py-3 bg-primary-600 hover:bg-primary-700 text-white rounded-xl transition">
+                                        <i class="fas fa-paper-plane"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        {% endif %}
+                    </div>
+                {% endif %}
+            </div>
+            
+            {% if request.status == 'accepted' and current_user.role == 'client' %}
+                <!-- Bouton pour terminer la prestation -->
+                <div class="mt-4">
+                    <form method="POST" action="{{ url_for('complete_request', request_id=request.id) }}">
+                        <button type="submit" class="w-full px-6 py-3 bg-success-600 hover:bg-success-700 text-white rounded-xl font-medium transition">
+                            <i class="fas fa-check-double mr-2"></i>Prestation terminée
+                        </button>
+                    </form>
+                </div>
+            {% endif %}
+        </div>
+        
+        <!-- Colonne droite - Informations -->
+        <div class="space-y-6">
+            
+            <!-- Profil de l'autre utilisateur -->
+            <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+                <h3 class="font-semibold text-gray-900 dark:text-white mb-4">
+                    <i class="fas fa-user-circle text-primary-500 mr-2"></i>
+                    {% if current_user.role == 'client' %}Aide ménagère{% else %}Client{% endif %}
+                </h3>
+                
+                <div class="text-center">
+                    {% if other_profile and other_profile.profile_picture %}
+                        <img src="{{ url_for('static', filename='uploads/' + other_profile.profile_picture) }}" 
+                             alt="{{ other_name }}" 
+                             class="w-24 h-24 rounded-full object-cover mx-auto border-4 border-gray-100 dark:border-gray-700">
+                    {% else %}
+                        <div class="w-24 h-24 rounded-full bg-gradient-to-r from-primary-500 to-secondary-500 flex items-center justify-center text-white text-3xl font-bold mx-auto">
+                            {{ other_initial }}
+                        </div>
+                    {% endif %}
+                    
+                    <h4 class="font-bold text-gray-900 dark:text-white mt-3">
+                        {{ other_name }}
+                    </h4>
+                    
+                    {% if current_user.role == 'client' and other_profile %}
+                        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                            <i class="fas fa-map-marker-alt mr-1"></i>{{ other_city }}
+                        </p>
+                        <div class="flex items-center justify-center mt-2">
+                            <div class="flex text-yellow-400">
+                                {% for i in range(5) %}
+                                    {% if other_rating >= i + 1 %}
+                                        <i class="fas fa-star"></i>
+                                    {% elif other_rating >= i + 0.5 %}
+                                        <i class="fas fa-star-half-alt"></i>
+                                    {% else %}
+                                        <i class="far fa-star"></i>
+                                    {% endif %}
+                                {% endfor %}
+                            </div>
+                            <span class="ml-2 text-sm text-gray-600 dark:text-gray-400">
+                                {{ "%.1f"|format(other_rating) }}
+                            </span>
+                        </div>
+                        
+                        <a href="{{ url_for('maid_profile', maid_id=other_profile.id) }}" 
+                           class="inline-block mt-4 text-primary-600 hover:text-primary-700 text-sm">
+                            <i class="fas fa-external-link-alt mr-1"></i>Voir le profil complet
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Informations de contact (si acceptée) -->
+            {% if request.status == 'accepted' or request.status == 'completed' %}
+                <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+                    <h3 class="font-semibold text-gray-900 dark:text-white mb-4">
+                        <i class="fas fa-address-card text-primary-500 mr-2"></i>
+                        Coordonnées
+                    </h3>
+                    
+                    <div class="space-y-3">
+                        {% if other_profile %}
+                            <div class="flex items-center">
+                                <i class="fas fa-phone text-primary-500 w-6"></i>
+                                <span class="text-gray-700 dark:text-gray-300">{{ other_profile.phone }}</span>
+                            </div>
+                        {% endif %}
+                        <div class="flex items-center">
+                            <i class="fas fa-envelope text-primary-500 w-6"></i>
+                            <span class="text-gray-700 dark:text-gray-300">{{ other_user.email }}</span>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-4 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                        <p class="text-xs text-green-800 dark:text-green-400">
+                            <i class="fas fa-shield-alt mr-1"></i>
+                            Ces coordonnées sont visibles car la demande est acceptée.
+                        </p>
+                    </div>
+                </div>
+            {% endif %}
+            
+            <!-- Avis (si terminée) -->
+            {% if request.status == 'completed' %}
+                <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+                    <h3 class="font-semibold text-gray-900 dark:text-white mb-4">
+                        <i class="fas fa-star text-yellow-500 mr-2"></i>Avis
+                    </h3>
+                    
+                    {% if request.review %}
+                        <div class="text-center">
+                            <div class="flex justify-center text-yellow-400 mb-2">
+                                {% for i in range(5) %}
+                                    {% if request.review.rating >= i + 1 %}
+                                        <i class="fas fa-star"></i>
+                                    {% else %}
+                                        <i class="far fa-star"></i>
+                                    {% endif %}
+                                {% endfor %}
+                            </div>
+                            <p class="text-gray-700 dark:text-gray-300">{{ request.review.comment or 'Aucun commentaire' }}</p>
+                        </div>
+                    {% elif current_user.role == 'client' %}
+                        <a href="{{ url_for('leave_review', request_id=request.id) }}" 
+                           class="block w-full text-center px-4 py-3 bg-primary-600 hover:bg-primary-700 text-white rounded-xl transition">
+                            <i class="fas fa-star mr-2"></i>Laisser un avis
+                        </a>
+                    {% else %}
+                        <p class="text-gray-500 dark:text-gray-400 text-center">En attente d'avis du client</p>
+                    {% endif %}
+                </div>
+            {% endif %}
+        </div>
+    </div>
 </div>
+
+<!-- Auto-scroll vers le bas des messages -->
+{% if messages %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const container = document.getElementById('messagesContainer');
+    if (container) {
+        container.scrollTop = container.scrollHeight;
+    }
+});
+</script>
+{% endif %}
 {% endblock %}

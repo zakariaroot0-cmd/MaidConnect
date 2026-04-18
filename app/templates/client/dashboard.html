@@ -1,53 +1,208 @@
 {% extends "base.html" %}
-{% block content %}
-<h1>Tableau de bord - Client</h1>
 
-<div class="row mt-4">
-    <div class="col-md-6">
-        <div class="card">
-            <div class="card-header">
-                <h5>Mes aides ménagères favorites</h5>
+{% block title %}Tableau de bord - Client{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <!-- En-tête -->
+    <div class="mb-8">
+        <h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+            Bonjour, {{ current_user.email.split('@')[0] }} ! 👋
+        </h1>
+        <p class="text-gray-600 dark:text-gray-400">Gérez vos réservations et favoris</p>
+    </div>
+    
+    <!-- Statistiques -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6 border border-gray-200 dark:border-gray-700">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">Total demandes</p>
+                    <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ requests|length }}</p>
+                </div>
+                <div class="w-12 h-12 bg-primary-100 dark:bg-primary-900 rounded-full flex items-center justify-center">
+                    <i class="fas fa-calendar-check text-primary-600 dark:text-primary-400"></i>
+                </div>
             </div>
-            <div class="card-body">
+        </div>
+        
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6 border border-gray-200 dark:border-gray-700">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">Favoris</p>
+                    <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ favorite_maids|length }}</p>
+                </div>
+                <div class="w-12 h-12 bg-secondary-100 dark:bg-secondary-900 rounded-full flex items-center justify-center">
+                    <i class="fas fa-heart text-secondary-600 dark:text-secondary-400"></i>
+                </div>
+            </div>
+        </div>
+        
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6 border border-gray-200 dark:border-gray-700">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">Messages</p>
+                    <p class="text-2xl font-bold text-gray-900 dark:text-white">0</p>
+                </div>
+                <div class="w-12 h-12 bg-success-100 dark:bg-success-900 rounded-full flex items-center justify-center">
+                    <i class="fas fa-envelope text-success-600 dark:text-success-400"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="grid lg:grid-cols-2 gap-8">
+        <!-- Section Favoris -->
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+            <div class="p-6 border-b border-gray-200 dark:border-gray-700">
+                <div class="flex items-center justify-between">
+                    <h2 class="text-xl font-semibold text-gray-900 dark:text-white">
+                        <i class="fas fa-heart text-secondary-500 mr-2"></i>Mes aides ménagères favorites
+                    </h2>
+                    <a href="{{ url_for('browse_maids') }}" class="text-primary-600 hover:text-primary-700 text-sm font-medium">
+                        Voir tout <i class="fas fa-arrow-right ml-1"></i>
+                    </a>
+                </div>
+            </div>
+            <div class="p-6">
                 {% if favorite_maids %}
-                    <div class="list-group">
-                    {% for maid in favorite_maids %}
-                        <a href="{{ url_for('maid_profile', maid_id=maid.id) }}" class="list-group-item list-group-item-action">
-                            {{ maid.full_name }} - {{ maid.city }}
-                            <span class="badge bg-primary">{{ "%.2f"|format(maid.hourly_rate) }} DH/h</span>
+                    <div class="space-y-4">
+                        {% for maid in favorite_maids[:5] %}
+                            <a href="{{ url_for('maid_profile', maid_id=maid.id) }}" 
+                               class="flex items-center justify-between p-3 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition">
+                                <div class="flex items-center space-x-3">
+                                    {% if maid.profile_picture %}
+                                        <img src="{{ url_for('static', filename='uploads/' + maid.profile_picture) }}" 
+                                             class="w-12 h-12 rounded-full object-cover">
+                                    {% else %}
+                                        <div class="w-12 h-12 bg-gradient-to-r from-primary-500 to-secondary-500 rounded-full flex items-center justify-center text-white font-bold text-lg">
+                                            {{ maid.full_name[0].upper() }}
+                                        </div>
+                                    {% endif %}
+                                    <div>
+                                        <p class="font-medium text-gray-900 dark:text-white">{{ maid.full_name }}</p>
+                                        <p class="text-sm text-gray-500 dark:text-gray-400">
+                                            <i class="fas fa-map-marker-alt mr-1"></i>{{ maid.city }}
+                                        </p>
+                                    </div>
+                                </div>
+                                <div class="text-right">
+                                    <p class="font-semibold text-gray-900 dark:text-white">{{ "%.0f"|format(maid.hourly_rate) }} DH/h</p>
+                                    <div class="flex items-center text-yellow-400">
+                                        <i class="fas fa-star text-xs"></i>
+                                        <span class="text-sm text-gray-600 dark:text-gray-400 ml-1">{{ "%.1f"|format(maid.rating) }}</span>
+                                    </div>
+                                </div>
+                            </a>
+                        {% endfor %}
+                    </div>
+                    {% if favorite_maids|length > 5 %}
+                        <div class="mt-4 text-center">
+                            <a href="{{ url_for('browse_maids') }}" class="text-primary-600 hover:text-primary-700 text-sm">
+                                Voir tous les favoris ({{ favorite_maids|length }})
+                            </a>
+                        </div>
+                    {% endif %}
+                {% else %}
+                    <div class="text-center py-8">
+                        <i class="fas fa-heart text-4xl text-gray-300 dark:text-gray-600 mb-3"></i>
+                        <p class="text-gray-500 dark:text-gray-400 mb-4">Vous n'avez pas encore de favoris</p>
+                        <a href="{{ url_for('browse_maids') }}" 
+                           class="inline-flex items-center px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition">
+                            <i class="fas fa-search mr-2"></i>Trouver une aide
                         </a>
-                    {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Section Demandes récentes -->
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+            <div class="p-6 border-b border-gray-200 dark:border-gray-700">
+                <div class="flex items-center justify-between">
+                    <h2 class="text-xl font-semibold text-gray-900 dark:text-white">
+                        <i class="fas fa-clock text-primary-500 mr-2"></i>Mes conversations récentes
+                    </h2>
+                    <a href="{{ url_for('messages') }}" class="text-primary-600 hover:text-primary-700 text-sm font-medium">
+                        Voir tout <i class="fas fa-arrow-right ml-1"></i>
+                    </a>
+                </div>
+            </div>
+            <div class="p-6">
+                {% if requests %}
+                    <div class="space-y-3">
+                        {% for req in requests[:5] %}
+                            <a href="{{ url_for('view_request', request_id=req.id) }}" 
+                               class="block p-3 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition border border-gray-200 dark:border-gray-700">
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center space-x-3">
+                                        {% if req.maid.maid_profile.profile_picture %}
+                                            <img src="{{ url_for('static', filename='uploads/' + req.maid.maid_profile.profile_picture) }}" 
+                                                 class="w-10 h-10 rounded-full object-cover">
+                                        {% else %}
+                                            <div class="w-10 h-10 bg-gradient-to-r from-primary-500 to-secondary-500 rounded-full flex items-center justify-center text-white font-bold">
+                                                {{ req.maid.maid_profile.full_name[0].upper() }}
+                                            </div>
+                                        {% endif %}
+                                        <div>
+                                            <p class="font-medium text-gray-900 dark:text-white">
+                                                {{ req.maid.maid_profile.full_name }}
+                                            </p>
+                                            <p class="text-xs text-gray-500 dark:text-gray-400">
+                                                {{ req.created_at.strftime('%d/%m/%Y') }}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <span class="px-3 py-1 rounded-full text-xs font-medium
+                                        {% if req.status == 'pending' %}bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400
+                                        {% elif req.status == 'accepted' %}bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400
+                                        {% elif req.status == 'completed' %}bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400
+                                        {% else %}bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-400{% endif %}">
+                                        {% if req.status == 'pending' %}En attente
+                                        {% elif req.status == 'accepted' %}Acceptée
+                                        {% elif req.status == 'completed' %}Terminée
+                                        {% elif req.status == 'rejected' %}Refusée
+                                        {% else %}{{ req.status }}{% endif %}
+                                    </span>
+                                </div>
+                                {% if req.message %}
+                                    <p class="text-sm text-gray-600 dark:text-gray-400 mt-2 line-clamp-1">
+                                        {{ req.message[:100] }}
+                                    </p>
+                                {% endif %}
+                            </a>
+                        {% endfor %}
                     </div>
                 {% else %}
-                    <p>Vous n'avez pas encore de favoris.</p>
-                    <a href="{{ url_for('browse_maids') }}" class="btn btn-primary">Trouver une aide</a>
+                    <div class="text-center py-8">
+                        <i class="fas fa-inbox text-4xl text-gray-300 dark:text-gray-600 mb-3"></i>
+                        <p class="text-gray-500 dark:text-gray-400">Aucune conversation</p>
+                        <p class="text-sm text-gray-400 dark:text-gray-500 mt-1">
+                            Contactez une aide ménagère pour commencer
+                        </p>
+                    </div>
                 {% endif %}
             </div>
         </div>
     </div>
     
-<div class="card">
-    <div class="card-header d-flex justify-content-between align-items-center">
-        <h5>Mes conversations</h5>
-        <a href="{{ url_for('messages') }}" class="btn btn-sm btn-outline-primary">Voir tout</a>
-    </div>
-    <div class="card-body">
-        {% if requests %}
-            <ul class="list-group">
-            {% for req in requests %}
-                <a href="{{ url_for('view_request', request_id=req.id) }}" class="list-group-item list-group-item-action">
-                    <div class="d-flex justify-content-between">
-                        <span>{{ req.maid.maid_profile.full_name }}</span>
-                        <span class="badge bg-{{ 'success' if req.status == 'accepted' else 'warning' }}">
-                            {{ req.status }}
-                        </span>
-                    </div>
-                </a>
-            {% endfor %}
-            </ul>
-        {% else %}
-            <p>Aucune conversation.</p>
-        {% endif %}
+    <!-- Aides recommandées -->
+    <div class="mt-8">
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+            <div class="p-6 border-b border-gray-200 dark:border-gray-700">
+                <h2 class="text-xl font-semibold text-gray-900 dark:text-white">
+                    <i class="fas fa-star text-yellow-500 mr-2"></i>Aides ménagères recommandées près de chez vous
+                </h2>
+            </div>
+            <div class="p-6">
+                <div class="text-center py-4">
+                    <a href="{{ url_for('browse_maids') }}" 
+                       class="inline-flex items-center px-6 py-3 bg-primary-600 hover:bg-primary-700 text-white rounded-xl transition">
+                        <i class="fas fa-search mr-2"></i>Parcourir toutes les aides
+                    </a>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 {% endblock %}

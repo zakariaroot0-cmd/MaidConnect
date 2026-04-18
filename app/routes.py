@@ -499,6 +499,7 @@ def init_routes(app):
         return {'count': count}
     
     # ========== ROUTES ADMIN ==========
+    
     @app.route('/admin/dashboard')
     @login_required
     def admin_dashboard():
@@ -578,7 +579,69 @@ def init_routes(app):
             return redirect(url_for('admin_users'))
         
         return render_template('admin/user_detail.html', user=user, form=form)
-    
+
+    @app.route('/admin/user/<int:user_id>/delete', methods=['POST'])
+    @login_required
+    def admin_delete_user(user_id):
+        """Supprime définitivement un utilisateur (admin seulement)"""
+        if current_user.role != 'admin':
+            flash('Accès réservé aux administrateurs.', 'danger')
+            return redirect(url_for('dashboard'))
+        
+        # Empêcher la suppression de son propre compte
+        if user_id == current_user.id:
+            flash('Vous ne pouvez pas supprimer votre propre compte.', 'danger')
+            return redirect(url_for('admin_users'))
+        
+        user = User.query.get_or_404(user_id)
+        
+        # Empêcher la suppression du dernier admin
+        if user.role == 'admin':
+            admin_count = User.query.filter_by(role='admin').count()
+            if admin_count <= 1:
+                flash('Impossible de supprimer le dernier administrateur.', 'danger')
+                return redirect(url_for('admin_users'))
+        
+        try:
+            email = user.email
+            
+            if user.maid_profile:
+                if user.maid_profile.profile_picture:
+                    picture_path = os.path.join(current_app.root_path, 'static', 'uploads', user.maid_profile.profile_picture)
+                    if os.path.exists(picture_path):
+                        os.remove(picture_path)
+                db.session.delete(user.maid_profile)
+            
+            if user.client_profile:
+                db.session.delete(user.client_profile)
+            
+            Favorite.query.filter(
+                (Favorite.client_id == user_id) | (Favorite.maid_id == user_id)
+            ).delete()
+            
+            ContactRequest.query.filter(
+                (ContactRequest.client_id == user_id) | (ContactRequest.maid_id == user_id)
+            ).delete()
+            
+            Message.query.filter(
+                (Message.sender_id == user_id) | (Message.receiver_id == user_id)
+            ).delete()
+            
+            Notification.query.filter_by(user_id=user_id).delete()
+            
+            db.session.delete(user)
+            db.session.commit()
+            
+            flash(f'Le compte {email} a été supprimé avec succès.', 'success')
+            app.logger.info(f"Admin {current_user.email} a supprimé l'utilisateur {email}")
+            
+        except Exception as e:
+            db.session.rollback()
+            flash('Une erreur est survenue lors de la suppression.', 'danger')
+            app.logger.error(f"Erreur suppression utilisateur {user_id}: {str(e)}")
+        
+        return redirect(url_for('admin_users'))
+
     @app.route('/admin/maids')
     @login_required
     def admin_maids():
@@ -732,3 +795,21 @@ def init_routes(app):
                 'verified': m.user.is_verified
             } for m in maids]
         }
+
+    # ========== PAGES LÉGALES ==========
+    @app.route('/mentions-legales')
+    def legal_mentions():
+        return render_template('legal/mentions.html')
+
+    @app.route('/confidentialite')
+    def legal_privacy():
+        return render_template('legal/privacy.html')
+
+    @app.route('/conditions')
+    def legal_terms():
+        return render_template('legal/terms.html')
+
+    @app.route('/cookies')
+    def legal_cookies():
+        return render_template('legal/cookies.html')
+    
