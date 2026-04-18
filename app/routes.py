@@ -35,20 +35,25 @@ def init_routes(app):
         
         form = RegistrationForm()
         if form.validate_on_submit():
-            hashed_password = bcrypt.generate_password_hash(form.password.data).decode('utf-8')
-            user = User(email=form.email.data, password=hashed_password, role=form.role.data)
-            db.session.add(user)
-            db.session.commit()
-            
-            login_user(user)
-            flash('Inscription réussie ! Complétez votre profil.', 'success')
-            
-            if user.role == 'maid':
-                return redirect(url_for('complete_maid_profile'))
-            elif user.role == 'client':
-                return redirect(url_for('complete_client_profile'))
-            else:
-                return redirect(url_for('dashboard'))
+            try:
+                hashed_password = bcrypt.generate_password_hash(form.password.data).decode('utf-8')
+                user = User(email=form.email.data, password=hashed_password, role=form.role.data)
+                db.session.add(user)
+                db.session.commit()
+                
+                login_user(user)
+                flash('Inscription réussie ! Complétez votre profil.', 'success')
+                
+                if user.role == 'maid':
+                    return redirect(url_for('complete_maid_profile'))
+                elif user.role == 'client':
+                    return redirect(url_for('complete_client_profile'))
+                else:
+                    return redirect(url_for('dashboard'))
+            except Exception as e:
+                db.session.rollback()
+                flash('Une erreur est survenue lors de l\'inscription. Veuillez réessayer.', 'danger')
+                app.logger.error(f"Erreur d'inscription: {str(e)}")
         
         return render_template('register.html', form=form)
     
@@ -425,16 +430,25 @@ def init_routes(app):
             flash('Accès réservé aux administrateurs.', 'danger')
             return redirect(url_for('dashboard'))
         
+        from sqlalchemy import func
+        from datetime import datetime, timedelta
+        
+        # Statistiques générales
         total_users = User.query.count()
         total_maids = User.query.filter_by(role='maid').count()
         total_clients = User.query.filter_by(role='client').count()
-        pending_verifications = MaidProfile.query.join(User).filter(
-            User.is_verified == False
-        ).count()
+        pending_verifications = MaidProfile.query.join(User).filter(User.is_verified == False).count()
         active_requests = ContactRequest.query.filter_by(status='accepted').count()
+        completed_requests = ContactRequest.query.filter_by(status='completed').count()
         total_reviews = Review.query.count()
+        avg_rating = db.session.query(func.avg(Review.rating)).scalar() or 0
         
-        from sqlalchemy import func
+        # Revenus estimés (5% de commission)
+        total_revenue = db.session.query(func.sum(MaidProfile.hourly_rate * 5)).join(
+            ContactRequest, ContactRequest.maid_id == MaidProfile.user_id
+        ).filter(ContactRequest.status == 'completed').scalar() or 0
+        
+        # Inscriptions par mois
         monthly_users = db.session.query(
             func.strftime('%Y-%m', User.created_at).label('month'),
             func.count(User.id).label('count')
@@ -443,15 +457,46 @@ def init_routes(app):
         months = [m[0] for m in monthly_users] if monthly_users else []
         counts = [m[1] for m in monthly_users] if monthly_users else []
         
+        # Demandes par statut (pour pie chart)
+        request_stats = db.session.query(
+            ContactRequest.status,
+            func.count(ContactRequest.id)
+        ).group_by(ContactRequest.status).all()
+        
+        status_labels = [s[0] for s in request_stats]
+        status_counts = [s[1] for s in request_stats]
+        
+        # Top 5 villes
+        top_cities = db.session.query(
+            MaidProfile.city,
+            func.count(MaidProfile.id).label('count')
+        ).group_by(MaidProfile.city).order_by(func.count(MaidProfile.id).desc()).limit(5).all()
+        
+        city_labels = [c[0] for c in top_cities]
+        city_counts = [c[1] for c in top_cities]
+        
+        # Dernières activités
+        recent_users = User.query.order_by(User.created_at.desc()).limit(5).all()
+        recent_requests = ContactRequest.query.order_by(ContactRequest.created_at.desc()).limit(5).all()
+        
         return render_template('admin/dashboard.html',
                              total_users=total_users,
                              total_maids=total_maids,
                              total_clients=total_clients,
                              pending_verifications=pending_verifications,
                              active_requests=active_requests,
+                             completed_requests=completed_requests,
                              total_reviews=total_reviews,
+                             avg_rating=avg_rating,
+                             total_revenue=total_revenue,
                              months=months,
-                             counts=counts)
+                             counts=counts,
+                             status_labels=status_labels,
+                             status_counts=status_counts,
+                             city_labels=city_labels,
+                             city_counts=city_counts,
+                             recent_users=recent_users,
+                             recent_requests=recent_requests)
     
     @app.route('/admin/users')
     @login_required
@@ -584,3 +629,4 @@ def init_routes(app):
         )
         
         return render_template('admin/reviews.html', reviews=reviews)
+    

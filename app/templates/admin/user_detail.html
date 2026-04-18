@@ -1,79 +1,112 @@
 {% extends "base.html" %}
+
+{% block title %}Détail utilisateur{% endblock %}
+
 {% block content %}
-<div class="row">
-    <div class="col-md-6">
-        <div class="card">
-            <div class="card-header">
-                <h3>Utilisateur #{{ user.id }}</h3>
-            </div>
-            <div class="card-body">
-                <form method="POST">
-                    {{ form.hidden_tag() }}
-                    
-                    <div class="mb-3">
-                        <label class="form-label">Email</label>
-                        <input type="email" class="form-control" value="{{ user.email }}" readonly>
-                    </div>
-                    
-                    <div class="mb-3">
-                        {{ form.role.label(class="form-label") }}
-                        {{ form.role(class="form-select") }}
-                    </div>
-                    
-                    <div class="mb-3">
-                        <div class="form-check">
-                            {{ form.is_active(class="form-check-input") }}
-                            {{ form.is_active.label(class="form-check-label") }}
-                        </div>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label class="form-label">Statut de vérification</label>
-                        <input type="text" class="form-control" 
-                               value="{{ 'Vérifié' if user.is_verified else 'Non vérifié' }}" readonly>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label class="form-label">Inscrit le</label>
-                        <input type="text" class="form-control" 
-                               value="{{ user.created_at.strftime('%d/%m/%Y %H:%M') }}" readonly>
-                    </div>
-                    
-                    {{ form.submit(class="btn btn-primary") }}
-                    <a href="{{ url_for('admin_users') }}" class="btn btn-secondary">Annuler</a>
-                </form>
-            </div>
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <!-- Header -->
+    <div class="flex items-center justify-between mb-8">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+                <i class="fas fa-user-circle text-primary-500 mr-3"></i>Utilisateur #{{ user.id }}
+            </h1>
+            <p class="text-gray-600 dark:text-gray-400">{{ user.email }}</p>
         </div>
+        <a href="{{ url_for('admin_users') }}" class="text-gray-600 dark:text-gray-400 hover:text-primary-600 transition">
+            <i class="fas fa-arrow-left mr-2"></i>Retour à la liste
+        </a>
     </div>
     
-    <div class="col-md-6">
-        <div class="card">
-            <div class="card-header">
-                <h5>Informations supplémentaires</h5>
-            </div>
-            <div class="card-body">
-                {% if user.role == 'maid' and user.maid_profile %}
-                    <h6>Profil d'aide ménagère</h6>
-                    <p><strong>Nom :</strong> {{ user.maid_profile.full_name }}</p>
-                    <p><strong>Ville :</strong> {{ user.maid_profile.city }}</p>
-                    <p><strong>Tarif :</strong> {{ user.maid_profile.hourly_rate }} DH/h</p>
-                    <p><strong>Note :</strong> {{ "%.1f"|format(user.maid_profile.rating) }}/5</p>
-                    <a href="{{ url_for('admin_maid_detail', maid_id=user.maid_profile.id) }}" class="btn btn-info">
-                        Voir le profil complet
-                    </a>
-                {% elif user.role == 'client' and user.client_profile %}
-                    <p>Client depuis {{ user.created_at.strftime('%d/%m/%Y') }}</p>
-                {% endif %}
-            </div>
+    <div class="grid lg:grid-cols-2 gap-8">
+        <!-- Formulaire -->
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+            <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-6">
+                <i class="fas fa-edit text-primary-500 mr-2"></i>Modifier l'utilisateur
+            </h2>
+            
+            <form method="POST" class="space-y-6">
+                {{ form.hidden_tag() }}
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Email</label>
+                    <input type="email" value="{{ user.email }}" class="w-full px-4 py-3 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg" readonly>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Rôle</label>
+                    {{ form.role(class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg") }}
+                </div>
+                
+                <div class="flex items-center">
+                    {{ form.is_active(class="rounded border-gray-300 text-primary-600 focus:ring-primary-500") }}
+                    <label class="ml-2 text-sm text-gray-700 dark:text-gray-300">Compte actif</label>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Statut de vérification</label>
+                    <input type="text" value="{{ 'Vérifié' if user.is_verified else 'Non vérifié' }}" 
+                           class="w-full px-4 py-3 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg" readonly>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Inscrit le</label>
+                    <input type="text" value="{{ user.created_at.strftime('%d/%m/%Y %H:%M') }}" 
+                           class="w-full px-4 py-3 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg" readonly>
+                </div>
+                
+                {{ form.submit(class="btn-primary w-full") }}
+            </form>
         </div>
         
-        <div class="card mt-3">
-            <div class="card-header">
-                <h5>Statistiques</h5>
+        <!-- Informations supplémentaires -->
+        <div class="space-y-6">
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+                <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+                    <i class="fas fa-info-circle text-primary-500 mr-2"></i>Informations
+                </h2>
+                
+                {% if user.role == 'maid' and user.maid_profile %}
+                    <dl class="space-y-3">
+                        <div class="flex justify-between">
+                            <dt class="text-gray-600 dark:text-gray-400">Nom complet</dt>
+                            <dd class="font-medium text-gray-900 dark:text-white">{{ user.maid_profile.full_name }}</dd>
+                        </div>
+                        <div class="flex justify-between">
+                            <dt class="text-gray-600 dark:text-gray-400">Ville</dt>
+                            <dd class="font-medium text-gray-900 dark:text-white">{{ user.maid_profile.city }}</dd>
+                        </div>
+                        <div class="flex justify-between">
+                            <dt class="text-gray-600 dark:text-gray-400">Tarif</dt>
+                            <dd class="font-medium text-gray-900 dark:text-white">{{ "%.0f"|format(user.maid_profile.hourly_rate) }} DH/h</dd>
+                        </div>
+                        <div class="flex justify-between">
+                            <dt class="text-gray-600 dark:text-gray-400">Note</dt>
+                            <dd class="font-medium text-gray-900 dark:text-white">{{ "%.1f"|format(user.maid_profile.rating) }}/5</dd>
+                        </div>
+                    </dl>
+                    <a href="{{ url_for('admin_maid_detail', maid_id=user.maid_profile.id) }}" 
+                       class="block text-center mt-4 text-primary-600 hover:text-primary-700 font-medium">
+                        <i class="fas fa-external-link-alt mr-1"></i>Voir le profil complet
+                    </a>
+                {% elif user.role == 'client' %}
+                    <p class="text-gray-600 dark:text-gray-400">Client depuis {{ user.created_at.strftime('%d/%m/%Y') }}</p>
+                {% endif %}
             </div>
-            <div class="card-body">
-                <p><strong>Messages envoyés :</strong> {{ user.sent_messages|length }}</p>
-                <p><strong>Messages reçus :</strong> {{ user.received_messages|length }}</p>
+            
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+                <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+                    <i class="fas fa-chart-bar text-primary-500 mr-2"></i>Statistiques
+                </h2>
+                <dl class="space-y-3">
+                    <div class="flex justify-between">
+                        <dt class="text-gray-600 dark:text-gray-400">Messages envoyés</dt>
+                        <dd class="font-medium text-gray-900 dark:text-white">{{ user.sent_messages|length }}</dd>
+                    </div>
+                    <div class="flex justify-between">
+                        <dt class="text-gray-600 dark:text-gray-400">Messages reçus</dt>
+                        <dd class="font-medium text-gray-900 dark:text-white">{{ user.received_messages|length }}</dd>
+                    </div>
+                </dl>
             </div>
         </div>
     </div>

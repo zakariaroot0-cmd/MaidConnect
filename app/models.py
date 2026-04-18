@@ -53,6 +53,7 @@ class Favorite(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     client_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     maid_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    private_notes = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     __table_args__ = (db.UniqueConstraint('client_id', 'maid_id', name='unique_favorite'),)
@@ -91,3 +92,51 @@ class Review(db.Model):
     is_visible = db.Column(db.Boolean, default=True)
     
     request = db.relationship('ContactRequest', backref='review')
+
+class Notification(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    title = db.Column(db.String(200), nullable=False)
+    message = db.Column(db.Text, nullable=False)
+    type = db.Column(db.String(50), default='info')
+    icon = db.Column(db.String(50), default='bell')
+    link = db.Column(db.String(500))
+    is_read = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    user = db.relationship('User', backref='notifications')
+
+class Booking(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    client_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    maid_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    request_id = db.Column(db.Integer, db.ForeignKey('contact_request.id'))
+    start_time = db.Column(db.DateTime, nullable=False)
+    end_time = db.Column(db.DateTime, nullable=False)
+    duration = db.Column(db.Float)
+    total_price = db.Column(db.Float)
+    status = db.Column(db.String(20), default='pending')
+    address = db.Column(db.String(500))
+    notes = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    client = db.relationship('User', foreign_keys=[client_id], backref='client_bookings')
+    maid = db.relationship('User', foreign_keys=[maid_id], backref='maid_bookings')
+    request = db.relationship('ContactRequest', backref='booking')
+
+class Badge(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    description = db.Column(db.Text)
+    icon = db.Column(db.String(50))
+    color = db.Column(db.String(20))
+    criteria = db.Column(db.Text)
+
+class UserBadge(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    badge_id = db.Column(db.Integer, db.ForeignKey('badge.id'), nullable=False)
+    earned_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    user = db.relationship('User', backref='badges')
+    badge = db.relationship('Badge')
