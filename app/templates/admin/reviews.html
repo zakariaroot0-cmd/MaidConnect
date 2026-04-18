@@ -1,0 +1,164 @@
+{% extends "base.html" %}
+
+{% block title %}Modération des avis{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <!-- Header -->
+    <div class="flex items-center justify-between mb-8">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+                <i class="fas fa-star text-yellow-500 mr-3"></i>Modération des avis
+            </h1>
+            <p class="text-gray-600 dark:text-gray-400">Gérez et modérez les avis laissés par les clients</p>
+        </div>
+        <a href="{{ url_for('admin_dashboard') }}" class="text-gray-600 dark:text-gray-400 hover:text-primary-600 transition">
+            <i class="fas fa-arrow-left mr-2"></i>Retour au dashboard
+        </a>
+    </div>
+    
+    <!-- Stats -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">Total avis</p>
+                    <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ reviews.total if reviews else 0 }}</p>
+                </div>
+                <div class="w-10 h-10 bg-yellow-100 dark:bg-yellow-900 rounded-full flex items-center justify-center">
+                    <i class="fas fa-star text-yellow-600"></i>
+                </div>
+            </div>
+        </div>
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">Note moyenne</p>
+                    <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ "%.1f"|format(avg_rating) }}/5</p>
+                </div>
+                <div class="w-10 h-10 bg-primary-100 dark:bg-primary-900 rounded-full flex items-center justify-center">
+                    <i class="fas fa-chart-line text-primary-600"></i>
+                </div>
+            </div>
+        </div>
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">Avis visibles</p>
+                    <p class="text-2xl font-bold text-green-600">{{ visible_count }}</p>
+                </div>
+                <div class="w-10 h-10 bg-green-100 dark:bg-green-900 rounded-full flex items-center justify-center">
+                    <i class="fas fa-eye text-green-600"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Liste des avis -->
+    <div class="space-y-4">
+        {% for review in reviews.items %}
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 {% if not review.is_visible %}opacity-60{% endif %}">
+            <div class="flex items-start justify-between">
+                <div class="flex-1">
+                    <div class="flex items-center mb-3">
+                        <div class="flex items-center text-yellow-400 mr-3">
+                            {% for i in range(5) %}
+                                {% if i < review.rating %}
+                                    <i class="fas fa-star"></i>
+                                {% else %}
+                                    <i class="far fa-star"></i>
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+                        <span class="text-sm font-medium text-gray-900 dark:text-white">{{ review.rating }}/5</span>
+                        
+                        {% if review.is_visible %}
+                            <span class="ml-3 px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400 text-xs rounded-full">
+                                <i class="fas fa-eye mr-1"></i>Visible
+                            </span>
+                        {% else %}
+                            <span class="ml-3 px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 text-xs rounded-full">
+                                <i class="fas fa-eye-slash mr-1"></i>Masqué
+                            </span>
+                        {% endif %}
+                    </div>
+                    
+                    <p class="text-gray-700 dark:text-gray-300 mb-3">{{ review.comment or 'Aucun commentaire' }}</p>
+                    
+                    <div class="flex items-center text-sm text-gray-500 dark:text-gray-400 space-x-4">
+                        <span>
+                            <i class="fas fa-user mr-1"></i>
+                            Client: {{ review.request.client.email }}
+                        </span>
+                        <span>
+                            <i class="fas fa-broom mr-1"></i>
+                            Aide: {{ review.request.maid.maid_profile.full_name if review.request.maid.maid_profile else 'N/A' }}
+                        </span>
+                        <span>
+                            <i class="far fa-calendar mr-1"></i>
+                            {{ review.created_at.strftime('%d/%m/%Y %H:%M') }}
+                        </span>
+                    </div>
+                    
+                    <div class="mt-3 text-sm">
+                        <a href="{{ url_for('view_request', request_id=review.request_id) }}" class="text-primary-600 hover:text-primary-700">
+                            <i class="fas fa-external-link-alt mr-1"></i>Voir la demande #{{ review.request_id }}
+                        </a>
+                    </div>
+                </div>
+                
+                <div class="ml-4">
+                    <form method="POST" action="{{ url_for('admin_toggle_review', review_id=review.id) }}" class="inline">
+                        <button type="submit" class="px-4 py-2 rounded-lg text-sm font-medium transition
+                            {% if review.is_visible %}
+                                bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600
+                            {% else %}
+                                bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-400 dark:hover:bg-green-900/50
+                            {% endif %}">
+                            <i class="fas {% if review.is_visible %}fa-eye-slash{% else %}fa-eye{% endif %} mr-1"></i>
+                            {% if review.is_visible %}Masquer{% else %}Afficher{% endif %}
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-12 text-center">
+            <i class="fas fa-star text-6xl text-gray-300 dark:text-gray-600 mb-4"></i>
+            <h3 class="text-xl font-medium text-gray-900 dark:text-white mb-2">Aucun avis</h3>
+            <p class="text-gray-500 dark:text-gray-400">Les avis apparaîtront ici une fois que les clients en laisseront.</p>
+        </div>
+        {% endfor %}
+    </div>
+    
+    <!-- Pagination -->
+    {% if reviews.pages > 1 %}
+    <div class="mt-6 flex justify-center">
+        <div class="flex space-x-2">
+            {% if reviews.has_prev %}
+                <a href="{{ url_for('admin_reviews', page=reviews.prev_num) }}" 
+                   class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700">
+                    <i class="fas fa-chevron-left"></i>
+                </a>
+            {% endif %}
+            {% for page in reviews.iter_pages() %}
+                {% if page %}
+                    <a href="{{ url_for('admin_reviews', page=page) }}" 
+                       class="px-4 py-2 border rounded-lg {% if page == reviews.page %}bg-primary-600 text-white border-primary-600{% else %}border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700{% endif %}">
+                        {{ page }}
+                    </a>
+                {% else %}
+                    <span class="px-4 py-2">...</span>
+                {% endif %}
+            {% endfor %}
+            {% if reviews.has_next %}
+                <a href="{{ url_for('admin_reviews', page=reviews.next_num) }}" 
+                   class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700">
+                    <i class="fas fa-chevron-right"></i>
+                </a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

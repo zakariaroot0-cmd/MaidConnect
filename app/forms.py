@@ -4,7 +4,20 @@ from wtforms.validators import DataRequired, Email, EqualTo, Length, ValidationE
 from app.models import User
 from flask_wtf.file import FileField, FileAllowed
 
+class RequestResetForm(FlaskForm):
+    email = StringField('Email', validators=[DataRequired(), Email()])
+    submit = SubmitField('Envoyer le lien de réinitialisation')
+    
+    def validate_email(self, email):
+        user = User.query.filter_by(email=email.data).first()
+        if user is None:
+            raise ValidationError('Aucun compte associé à cet email.')
 
+class ResetPasswordForm(FlaskForm):
+    password = PasswordField('Nouveau mot de passe', validators=[DataRequired(), Length(min=6)])
+    confirm_password = PasswordField('Confirmer le mot de passe', 
+                                     validators=[DataRequired(), EqualTo('password')])
+    submit = SubmitField('Réinitialiser le mot de passe')
 class RegistrationForm(FlaskForm):
     email = StringField('Email', validators=[DataRequired(), Email()])
     password = PasswordField('Mot de passe', validators=[DataRequired(), Length(min=6)])
