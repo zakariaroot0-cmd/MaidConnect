@@ -1,81 +1,216 @@
 {% extends "base.html" %}
+
+{% block title %}{{ maid.full_name }} - Admin{% endblock %}
+
 {% block content %}
-<div class="row">
-    <div class="col-md-8">
-        <div class="card mb-4">
-            <div class="card-header">
-                <h3>Profil de {{ maid.full_name }}</h3>
-            </div>
-            <div class="card-body">
-                <!-- Informations détaillées ici -->
-                <h5>Informations personnelles</h5>
-                <p><strong>Email :</strong> {{ user.email }}</p>
-                <p><strong>Téléphone :</strong> {{ maid.phone }}</p>
-                <p><strong>Ville :</strong> {{ maid.city }}</p>
-                <p><strong>Langues :</strong> {{ maid.languages }}</p>
-                
-                <h5 class="mt-4">Compétences et expérience</h5>
-                <p><strong>Compétences :</strong> {{ maid.skills }}</p>
-                <p><strong>Expérience :</strong> {{ maid.experience }}</p>
-                
-                <h5 class="mt-4">Statistiques</h5>
-                <p><strong>Prestations complétées :</strong> {{ completed_requests }}</p>
-                <p><strong>Note moyenne :</strong> {{ "%.1f"|format(maid.rating) }}/5</p>
-            </div>
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <!-- Header -->
+    <div class="flex items-center justify-between mb-8">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+                <i class="fas fa-user-circle text-primary-500 mr-3"></i>Profil de {{ maid.full_name }}
+            </h1>
+            <p class="text-gray-600 dark:text-gray-400">Gestion du profil d'aide ménagère</p>
         </div>
-        
-        <!-- Derniers avis -->
-        <div class="card">
-            <div class="card-header">
-                <h5>Derniers avis reçus</h5>
-            </div>
-            <div class="card-body">
-                {% if reviews %}
-                    {% for review in reviews %}
-                    <div class="border-bottom mb-3 pb-3">
-                        <div class="d-flex justify-content-between">
-                            <strong>{{ review.rating }}/5 ⭐</strong>
-                            <small>{{ review.created_at.strftime('%d/%m/%Y') }}</small>
-                        </div>
-                        <p class="mb-0">{{ review.comment or 'Pas de commentaire' }}</p>
+        <a href="{{ url_for('admin_maids') }}" class="text-gray-600 dark:text-gray-400 hover:text-primary-600 transition">
+            <i class="fas fa-arrow-left mr-2"></i>Retour à la liste
+        </a>
+    </div>
+    
+    <div class="grid lg:grid-cols-3 gap-8">
+        <!-- Colonne de gauche - Infos et stats -->
+        <div class="lg:col-span-2 space-y-6">
+            <!-- Informations personnelles -->
+            <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+                <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-6 flex items-center">
+                    <i class="fas fa-user text-primary-500 mr-3"></i>Informations personnelles
+                </h2>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Email</label>
+                        <p class="text-gray-900 dark:text-white font-medium">{{ user.email }}</p>
                     </div>
-                    {% endfor %}
+                    <div>
+                        <label class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Téléphone</label>
+                        <p class="text-gray-900 dark:text-white font-medium">{{ maid.phone }}</p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Ville</label>
+                        <p class="text-gray-900 dark:text-white font-medium">{{ maid.city }}</p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Tarif horaire</label>
+                        <p class="text-gray-900 dark:text-white font-medium">{{ "%.0f"|format(maid.hourly_rate) }} DH</p>
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Langues</label>
+                        <p class="text-gray-900 dark:text-white font-medium">{{ maid.languages or 'Non spécifié' }}</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Compétences et expérience -->
+            <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+                <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-6 flex items-center">
+                    <i class="fas fa-tools text-primary-500 mr-3"></i>Compétences et expérience
+                </h2>
+                
+                <div class="mb-6">
+                    <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Compétences</h3>
+                    <div class="flex flex-wrap gap-2">
+                        {% if maid.skills %}
+                            {% for skill in maid.skills.split(',') %}
+                                <span class="px-3 py-1 bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300 rounded-full text-sm">
+                                    {{ skill.strip() }}
+                                </span>
+                            {% endfor %}
+                        {% else %}
+                            <p class="text-gray-500 dark:text-gray-400">Non spécifié</p>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div>
+                    <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Expérience</h3>
+                    <p class="text-gray-700 dark:text-gray-300 whitespace-pre-line">{{ maid.experience or 'Non spécifié' }}</p>
+                </div>
+            </div>
+            
+            <!-- Statistiques -->
+            <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+                <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-6 flex items-center">
+                    <i class="fas fa-chart-bar text-primary-500 mr-3"></i>Statistiques
+                </h2>
+                
+                <div class="grid grid-cols-3 gap-4">
+                    <div class="text-center p-4 bg-gray-50 dark:bg-gray-700 rounded-xl">
+                        <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ completed_requests }}</p>
+                        <p class="text-sm text-gray-500 dark:text-gray-400">Prestations complétées</p>
+                    </div>
+                    <div class="text-center p-4 bg-gray-50 dark:bg-gray-700 rounded-xl">
+                        <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ "%.1f"|format(maid.rating) }}/5</p>
+                        <p class="text-sm text-gray-500 dark:text-gray-400">Note moyenne</p>
+                    </div>
+                    <div class="text-center p-4 bg-gray-50 dark:bg-gray-700 rounded-xl">
+                        <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ reviews|length }}</p>
+                        <p class="text-sm text-gray-500 dark:text-gray-400">Avis reçus</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Derniers avis -->
+            <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+                <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-6 flex items-center">
+                    <i class="fas fa-star text-yellow-500 mr-3"></i>Derniers avis reçus
+                </h2>
+                
+                {% if reviews %}
+                    <div class="space-y-4">
+                        {% for review in reviews %}
+                            <div class="border-b border-gray-200 dark:border-gray-700 pb-4 last:border-0 last:pb-0">
+                                <div class="flex items-center justify-between mb-2">
+                                    <div class="flex items-center">
+                                        <div class="flex text-yellow-400 mr-2">
+                                            {% for i in range(5) %}
+                                                {% if i < review.rating %}
+                                                    <i class="fas fa-star text-sm"></i>
+                                                {% else %}
+                                                    <i class="far fa-star text-sm"></i>
+                                                {% endif %}
+                                            {% endfor %}
+                                        </div>
+                                        <span class="text-sm font-medium text-gray-900 dark:text-white">{{ review.rating }}/5</span>
+                                    </div>
+                                    <span class="text-xs text-gray-500 dark:text-gray-400">
+                                        {{ review.created_at.strftime('%d/%m/%Y') }}
+                                    </span>
+                                </div>
+                                <p class="text-gray-700 dark:text-gray-300 text-sm">{{ review.comment or 'Aucun commentaire' }}</p>
+                                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                    Par client #{{ review.request.client_id }}
+                                </p>
+                            </div>
+                        {% endfor %}
+                    </div>
                 {% else %}
-                    <p class="text-muted">Aucun avis pour le moment.</p>
+                    <p class="text-gray-500 dark:text-gray-400 text-center py-4">Aucun avis pour le moment.</p>
                 {% endif %}
             </div>
         </div>
-    </div>
-    
-    <div class="col-md-4">
-        <div class="card">
-            <div class="card-header">
-                <h5>Vérification</h5>
+        
+        <!-- Colonne de droite - Vérification et actions -->
+        <div class="space-y-6">
+            <!-- Photo de profil -->
+            <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 text-center">
+                {% if maid.profile_picture %}
+                    <img src="{{ url_for('static', filename='uploads/' + maid.profile_picture) }}" 
+                         alt="{{ maid.full_name }}" 
+                         class="w-32 h-32 rounded-full object-cover mx-auto border-4 border-white dark:border-gray-700 shadow-lg">
+                {% else %}
+                    <div class="w-32 h-32 rounded-full bg-gradient-to-br from-primary-400 to-secondary-500 flex items-center justify-center text-white text-4xl font-bold mx-auto shadow-lg">
+                        {{ maid.full_name[0].upper() }}
+                    </div>
+                {% endif %}
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white mt-4">{{ maid.full_name }}</h3>
+                <p class="text-sm text-gray-500 dark:text-gray-400">Inscrite le {{ maid.created_at.strftime('%d/%m/%Y') }}</p>
+                
+                <div class="mt-3">
+                    {% if user.is_verified %}
+                        <span class="inline-flex items-center px-3 py-1 bg-success-100 dark:bg-success-900/30 text-success-800 dark:text-success-400 rounded-full text-sm">
+                            <i class="fas fa-check-circle mr-1"></i>Identité vérifiée
+                        </span>
+                    {% else %}
+                        <span class="inline-flex items-center px-3 py-1 bg-warning-100 dark:bg-warning-900/30 text-warning-800 dark:text-warning-400 rounded-full text-sm">
+                            <i class="fas fa-clock mr-1"></i>En attente de vérification
+                        </span>
+                    {% endif %}
+                </div>
             </div>
-            <div class="card-body">
-                <form method="POST">
+            
+            <!-- Formulaire de vérification -->
+            <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+                <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-6 flex items-center">
+                    <i class="fas fa-shield-alt text-primary-500 mr-3"></i>Vérification
+                </h2>
+                
+                <form method="POST" class="space-y-6">
                     {{ form.hidden_tag() }}
                     
-                    <div class="mb-3">
-                        {{ form.is_verified.label(class="form-label") }}
-                        {{ form.is_verified(class="form-select") }}
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Statut de vérification
+                        </label>
+                        {{ form.is_verified(class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-2 focus:ring-primary-500") }}
                     </div>
                     
-                    <div class="mb-3">
-                        {{ form.admin_notes.label(class="form-label") }}
-                        {{ form.admin_notes(class="form-control", rows=4) }}
-                        <small class="text-muted">Notes visibles uniquement par les administrateurs</small>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Notes internes
+                        </label>
+                        {{ form.admin_notes(class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg", rows="4", placeholder="Notes visibles uniquement par les administrateurs...") }}
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Notes visibles uniquement par les administrateurs</p>
                     </div>
                     
-                    {{ form.submit(class="btn btn-primary w-100") }}
+                    {{ form.submit(class="w-full btn-primary") }}
                 </form>
+            </div>
+            
+            <!-- Actions -->
+            <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+                <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Actions</h2>
                 
-                <hr>
-                
-                <h6>Actions</h6>
-                <a href="{{ url_for('admin_user_detail', user_id=user.id) }}" class="btn btn-secondary w-100 mb-2">
-                    Gérer le compte utilisateur
-                </a>
+                <div class="space-y-3">
+                    <a href="{{ url_for('admin_user_detail', user_id=user.id) }}" 
+                       class="block w-full text-center bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 py-3 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition">
+                        <i class="fas fa-user-cog mr-2"></i>Gérer le compte utilisateur
+                    </a>
+                    
+                    <a href="{{ url_for('maid_profile', maid_id=maid.id) }}" target="_blank"
+                       class="block w-full text-center border border-primary-500 text-primary-600 dark:text-primary-400 py-3 rounded-lg hover:bg-primary-50 dark:hover:bg-primary-900/20 transition">
+                        <i class="fas fa-external-link-alt mr-2"></i>Voir le profil public
+                    </a>
+                </div>
             </div>
         </div>
     </div>

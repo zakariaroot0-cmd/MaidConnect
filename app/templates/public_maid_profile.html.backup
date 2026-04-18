@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% block title %}{{ maid.full_name }} - MaidConnect{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="bg-white rounded-lg shadow-lg overflow-hidden">
+        <!-- En-tête -->
+        <div class="bg-gradient-to-r from-blue-500 to-purple-600 p-6">
+            <h1 class="text-3xl font-bold text-white">{{ maid.full_name }}</h1>
+        </div>
+        
+        <!-- Contenu -->
+        <div class="p-6">
+            <div class="grid md:grid-cols-2 gap-6">
+                <div>
+                    <h2 class="text-xl font-semibold mb-4">Informations</h2>
+                    <ul class="space-y-2">
+                        <li class="flex items-center">
+                            <span class="w-8 text-blue-500"><i class="fas fa-map-marker-alt"></i></span>
+                            <span>{{ maid.city }}</span>
+                        </li>
+                        <li class="flex items-center">
+                            <span class="w-8 text-blue-500"><i class="fas fa-tag"></i></span>
+                            <span>{{ "%.2f"|format(maid.hourly_rate) }} DH/heure</span>
+                        </li>
+                        <li class="flex items-center">
+                            <span class="w-8 text-blue-500"><i class="fas fa-language"></i></span>
+                            <span>{{ maid.languages or 'Non spécifié' }}</span>
+                        </li>
+                    </ul>
+                </div>
+                
+                <div>
+                    <h2 class="text-xl font-semibold mb-4">Compétences</h2>
+                    <p>{{ maid.skills or 'Non spécifié' }}</p>
+                    
+                    <h2 class="text-xl font-semibold mt-4 mb-2">Expérience</h2>
+                    <p>{{ maid.experience or 'Non spécifié' }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

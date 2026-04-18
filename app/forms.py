@@ -4,16 +4,20 @@ from wtforms.validators import DataRequired, Email, EqualTo, Length, ValidationE
 from app.models import User
 from flask_wtf.file import FileField, FileAllowed
 
-class MaidProfileForm(FlaskForm):
-    full_name = StringField('Nom complet', validators=[DataRequired()])
-    phone = StringField('Téléphone', validators=[DataRequired()])
-    city = StringField('Ville', validators=[DataRequired()])
-    hourly_rate = FloatField('Tarif horaire (DH)', validators=[DataRequired()])
-    languages = StringField('Langues parlées (ex: Français, Arabe)', validators=[DataRequired()])
-    experience = TextAreaField('Expérience professionnelle')
-    skills = TextAreaField('Compétences (cuisine, ménage, garde d\'enfants...)')
-    profile_picture = FileField('Photo de profil', validators=[FileAllowed(['jpg', 'png', 'jpeg', 'gif'], 'Images uniquement!')])
-    submit = SubmitField('Compléter mon profil')
+class RequestResetForm(FlaskForm):
+    email = StringField('Email', validators=[DataRequired(), Email()])
+    submit = SubmitField('Envoyer le lien de réinitialisation')
+    
+    def validate_email(self, email):
+        user = User.query.filter_by(email=email.data).first()
+        if user is None:
+            raise ValidationError('Aucun compte associé à cet email.')
+
+class ResetPasswordForm(FlaskForm):
+    password = PasswordField('Nouveau mot de passe', validators=[DataRequired(), Length(min=6)])
+    confirm_password = PasswordField('Confirmer le mot de passe', 
+                                     validators=[DataRequired(), EqualTo('password')])
+    submit = SubmitField('Réinitialiser le mot de passe')
 class RegistrationForm(FlaskForm):
     email = StringField('Email', validators=[DataRequired(), Email()])
     password = PasswordField('Mot de passe', validators=[DataRequired(), Length(min=6)])
@@ -68,9 +72,37 @@ class AdminVerifyMaidForm(FlaskForm):
     admin_notes = TextAreaField('Notes internes')
     submit = SubmitField('Mettre à jour')
 
+class MaidProfileForm(FlaskForm):
+    full_name = StringField('Nom complet', validators=[DataRequired()])
+    phone = StringField('Téléphone', validators=[DataRequired()])
+    city = StringField('Ville', validators=[DataRequired()])
+    hourly_rate = FloatField('Tarif horaire (DH)', validators=[DataRequired()])
+    languages = StringField('Langues parlées (ex: Français, Arabe)', validators=[DataRequired()])
+    experience = TextAreaField('Expérience professionnelle')
+    skills = TextAreaField('Compétences (cuisine, ménage, garde d\'enfants...)')
+    profile_picture = FileField('Photo de profil', validators=[FileAllowed(['jpg', 'png', 'jpeg', 'gif'], 'Images uniquement!')])
+    submit = SubmitField('Compléter mon profil')
+
 class AdminUserForm(FlaskForm):
     is_active = BooleanField('Compte actif')
     role = SelectField('Rôle', choices=[('client', 'Client'), 
                                         ('maid', 'Aide ménagère'),
                                         ('admin', 'Administrateur')])
     submit = SubmitField('Mettre à jour')
+class AdvancedSearchForm(FlaskForm):
+    city = StringField('Ville')
+    min_rate = FloatField('Tarif minimum')
+    max_rate = FloatField('Tarif maximum')
+    languages = StringField('Langues')
+    min_rating = FloatField('Note minimum')
+    skills = StringField('Compétences')
+    availability = SelectField('Disponibilité', choices=[
+        ('', 'Toutes'),
+        ('weekdays', 'En semaine'),
+        ('weekends', 'Week-end'),
+        ('mornings', 'Matin'),
+        ('afternoons', 'Après-midi')
+    ])
+    verified_only = BooleanField('Profils vérifiés uniquement')
+    has_reviews = BooleanField('Avec avis uniquement')
+    submit = SubmitField('Rechercher')

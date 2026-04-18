@@ -1,79 +1,125 @@
 {% extends "base.html" %}
-{% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h1>Gestion des aides ménagères</h1>
-    <a href="{{ url_for('admin_dashboard') }}" class="btn btn-secondary">← Retour</a>
-</div>
 
-<!-- Filtres -->
-<div class="card mb-4">
-    <div class="card-body">
-        <form method="GET" class="row g-3">
-            <div class="col-md-4">
-                <select name="status" class="form-select">
+{% block title %}Gestion des aides{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <!-- Header -->
+    <div class="flex items-center justify-between mb-8">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+                <i class="fas fa-broom text-primary-500 mr-3"></i>Gestion des aides ménagères
+            </h1>
+            <p class="text-gray-600 dark:text-gray-400">Validez et gérez les profils d'aides ménagères</p>
+        </div>
+        <a href="{{ url_for('admin_dashboard') }}" class="text-gray-600 dark:text-gray-400 hover:text-primary-600 transition">
+            <i class="fas fa-arrow-left mr-2"></i>Retour au dashboard
+        </a>
+    </div>
+    
+    <!-- Filtres -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-8">
+        <form method="GET" class="flex items-end space-x-4">
+            <div class="flex-1">
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Statut de vérification</label>
+                <select name="status" class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg">
                     <option value="">Tous les statuts</option>
-                    <option value="pending" {% if request.args.get('status') == 'pending' %}selected{% endif %}>
-                        En attente de vérification
-                    </option>
-                    <option value="verified" {% if request.args.get('status') == 'verified' %}selected{% endif %}>
-                        Vérifiés
-                    </option>
+                    <option value="pending" {% if request.args.get('status') == 'pending' %}selected{% endif %}>En attente</option>
+                    <option value="verified" {% if request.args.get('status') == 'verified' %}selected{% endif %}>Vérifiés</option>
                 </select>
             </div>
-            <div class="col-md-2">
-                <button type="submit" class="btn btn-primary w-100">Filtrer</button>
-            </div>
-            <div class="col-md-2">
-                <a href="{{ url_for('admin_maids') }}" class="btn btn-secondary w-100">Reset</a>
-            </div>
+            <button type="submit" class="btn-primary">
+                <i class="fas fa-filter mr-2"></i>Filtrer
+            </button>
+            <a href="{{ url_for('admin_maids') }}" class="btn-secondary">Reset</a>
         </form>
     </div>
-</div>
-
-<!-- Liste des maids -->
-<div class="row">
-    {% for maid in maids.items %}
-    <div class="col-md-6 mb-3">
-        <div class="card">
-            <div class="card-body">
-                <div class="d-flex justify-content-between">
-                    <h5>{{ maid.full_name }}</h5>
-                    <span>
-                        {% if maid.user.is_verified %}
-                            <span class="badge bg-success">✅ Vérifié</span>
-                        {% else %}
-                            <span class="badge bg-warning">⏳ En attente</span>
-                        {% endif %}
-                    </span>
+    
+    <!-- Liste des maids -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {% for maid in maids.items %}
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 card-hover">
+            <div class="flex items-start justify-between mb-4">
+                <div class="flex items-center space-x-3">
+                    {% if maid.profile_picture %}
+                        <img src="{{ url_for('static', filename='uploads/' + maid.profile_picture) }}" 
+                             class="w-12 h-12 rounded-full object-cover">
+                    {% else %}
+                        <div class="w-12 h-12 bg-gradient-to-r from-primary-500 to-secondary-500 rounded-full flex items-center justify-center text-white font-bold text-lg">
+                            {{ maid.full_name[0].upper() }}
+                        </div>
+                    {% endif %}
+                    <div>
+                        <h3 class="font-semibold text-gray-900 dark:text-white">{{ maid.full_name }}</h3>
+                        <p class="text-sm text-gray-500 dark:text-gray-400">{{ maid.user.email }}</p>
+                    </div>
                 </div>
-                <p class="text-muted">{{ maid.user.email }}</p>
-                <p>
-                    <strong>Ville :</strong> {{ maid.city }}<br>
-                    <strong>Tarif :</strong> {{ "%.2f"|format(maid.hourly_rate) }} DH/h<br>
-                    <strong>Note :</strong> {{ "%.1f"|format(maid.rating) }}/5<br>
-                    <strong>Inscrite le :</strong> {{ maid.created_at.strftime('%d/%m/%Y') }}
-                </p>
-                <a href="{{ url_for('admin_maid_detail', maid_id=maid.id) }}" class="btn btn-primary">
-                    Gérer ce profil
-                </a>
+                {% if maid.user.is_verified %}
+                    <span class="bg-success-100 text-success-800 text-xs px-3 py-1 rounded-full">
+                        <i class="fas fa-check-circle mr-1"></i>Vérifié
+                    </span>
+                {% else %}
+                    <span class="bg-warning-100 text-warning-800 text-xs px-3 py-1 rounded-full">
+                        <i class="fas fa-clock mr-1"></i>En attente
+                    </span>
+                {% endif %}
             </div>
+            
+            <div class="space-y-2 mb-4">
+                <div class="flex items-center text-sm">
+                    <i class="fas fa-map-marker-alt text-primary-500 w-5"></i>
+                    <span class="text-gray-600 dark:text-gray-400">{{ maid.city }}</span>
+                </div>
+                <div class="flex items-center text-sm">
+                    <i class="fas fa-tag text-primary-500 w-5"></i>
+                    <span class="text-gray-600 dark:text-gray-400">{{ "%.0f"|format(maid.hourly_rate) }} DH/heure</span>
+                </div>
+                <div class="flex items-center text-sm">
+                    <i class="fas fa-star text-yellow-400 w-5"></i>
+                    <span class="text-gray-600 dark:text-gray-400">{{ "%.1f"|format(maid.rating) }}/5.0</span>
+                </div>
+                <div class="flex items-center text-sm">
+                    <i class="fas fa-calendar text-primary-500 w-5"></i>
+                    <span class="text-gray-600 dark:text-gray-400">Inscrite le {{ maid.created_at.strftime('%d/%m/%Y') }}</span>
+                </div>
+            </div>
+            
+            <a href="{{ url_for('admin_maid_detail', maid_id=maid.id) }}" 
+               class="block w-full text-center bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400 py-2 rounded-lg hover:bg-primary-100 dark:hover:bg-primary-900/30 transition">
+                <i class="fas fa-eye mr-1"></i>Gérer ce profil
+            </a>
+        </div>
+        {% endfor %}
+    </div>
+    
+    <!-- Pagination -->
+    {% if maids.pages > 1 %}
+    <div class="mt-8 flex justify-center">
+        <div class="flex space-x-2">
+            {% if maids.has_prev %}
+                <a href="{{ url_for('admin_maids', page=maids.prev_num, **request.args) }}" 
+                   class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700">
+                    <i class="fas fa-chevron-left"></i>
+                </a>
+            {% endif %}
+            {% for page in maids.iter_pages() %}
+                {% if page %}
+                    <a href="{{ url_for('admin_maids', page=page, **request.args) }}" 
+                       class="px-4 py-2 border rounded-lg {% if page == maids.page %}bg-primary-600 text-white border-primary-600{% else %}border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700{% endif %}">
+                        {{ page }}
+                    </a>
+                {% else %}
+                    <span class="px-4 py-2">...</span>
+                {% endif %}
+            {% endfor %}
+            {% if maids.has_next %}
+                <a href="{{ url_for('admin_maids', page=maids.next_num, **request.args) }}" 
+                   class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700">
+                    <i class="fas fa-chevron-right"></i>
+                </a>
+            {% endif %}
         </div>
     </div>
-    {% endfor %}
+    {% endif %}
 </div>
-
-<!-- Pagination -->
-{% if maids.pages > 1 %}
-<nav>
-    <ul class="pagination">
-        {% for page in maids.iter_pages() %}
-            {% if page %}
-                <li class="page-item {% if page == maids.page %}active{% endif %}">
-                    <a class="page-link" href="{{ url_for('admin_maids', page=page, **request.args) }}">{{ page }}</a>
-                </li>
-            {% endif %}
-        {% endfor %}
-    </ul>
-</nav>
-{% endif %}
 {% endblock %}

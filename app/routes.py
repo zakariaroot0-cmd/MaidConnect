@@ -1,13 +1,17 @@
 import os
 import secrets
+import csv
+from io import StringIO
 from PIL import Image
-from flask import render_template, redirect, url_for, flash, request, current_app
+from flask import render_template, redirect, url_for, flash, request, current_app, make_response
 from flask_login import login_user, logout_user, current_user, login_required
+from sqlalchemy import func
 from app import db, bcrypt
-from app.models import User, MaidProfile, ClientProfile, Favorite, ContactRequest, Message, Review
+from app.models import User, MaidProfile, ClientProfile, Favorite, ContactRequest, Message, Review, Notification
 from app.forms import (RegistrationForm, LoginForm, MaidProfileForm, 
                        ContactRequestForm, MessageForm, ReviewForm,
-                       AdminVerifyMaidForm, AdminUserForm)
+                       AdminVerifyMaidForm, AdminUserForm, RequestResetForm, ResetPasswordForm)
+from app.utils import send_reset_email, verify_reset_token
 
 def init_routes(app):
     
@@ -24,33 +28,40 @@ def init_routes(app):
         
         return picture_fn
     
+    # ========== ROUTES PUBLIQUES ==========
     @app.route('/')
     def index():
         return render_template('index.html')
     
     @app.route('/register', methods=['GET', 'POST'])
     def register():
-        if current_user.is_authenticated:
-            return redirect(url_for('dashboard'))
-        
-        form = RegistrationForm()
-        if form.validate_on_submit():
-            hashed_password = bcrypt.generate_password_hash(form.password.data).decode('utf-8')
-            user = User(email=form.email.data, password=hashed_password, role=form.role.data)
-            db.session.add(user)
-            db.session.commit()
-            
-            login_user(user)
-            flash('Inscription réussie ! Complétez votre profil.', 'success')
-            
-            if user.role == 'maid':
-                return redirect(url_for('complete_maid_profile'))
-            elif user.role == 'client':
-                return redirect(url_for('complete_client_profile'))
-            else:
+        try:
+            if current_user.is_authenticated:
                 return redirect(url_for('dashboard'))
-        
-        return render_template('register.html', form=form)
+            
+            form = RegistrationForm()
+            if form.validate_on_submit():
+                hashed_password = bcrypt.generate_password_hash(form.password.data).decode('utf-8')
+                user = User(email=form.email.data, password=hashed_password, role=form.role.data)
+                db.session.add(user)
+                db.session.commit()
+                
+                login_user(user)
+                flash('Inscription réussie ! Complétez votre profil.', 'success')
+                
+                if user.role == 'maid':
+                    return redirect(url_for('complete_maid_profile'))
+                elif user.role == 'client':
+                    return redirect(url_for('complete_client_profile'))
+                else:
+                    return redirect(url_for('dashboard'))
+            
+            return render_template('register.html', form=form)
+        except Exception as e:
+            db.session.rollback()
+            flash('Une erreur est survenue lors de l\'inscription.', 'danger')
+            app.logger.error(f"Erreur d'inscription: {str(e)}")
+            return redirect(url_for('register'))
     
     @app.route('/login', methods=['GET', 'POST'])
     def login():
@@ -87,6 +98,48 @@ def init_routes(app):
         else:
             return redirect(url_for('client_dashboard'))
     
+    # ========== RÉINITIALISATION MOT DE PASSE ==========
+    @app.route('/reset-password', methods=['GET', 'POST'])
+    def request_reset():
+        if current_user.is_authenticated:
+            return redirect(url_for('dashboard'))
+        
+        form = RequestResetForm()
+        if form.validate_on_submit():
+            user = User.query.filter_by(email=form.email.data).first()
+            if user:
+                send_reset_email(user)
+            flash('Un email de réinitialisation a été envoyé si ce compte existe.', 'info')
+            return redirect(url_for('login'))
+        
+        return render_template('auth/request_reset.html', form=form)
+    
+    @app.route('/reset-password/<token>', methods=['GET', 'POST'])
+    def reset_password(token):
+        if current_user.is_authenticated:
+            return redirect(url_for('dashboard'))
+        
+        email = verify_reset_token(token)
+        if not email:
+            flash('Le lien est invalide ou a expiré.', 'danger')
+            return redirect(url_for('request_reset'))
+        
+        user = User.query.filter_by(email=email).first()
+        if not user:
+            flash('Utilisateur introuvable.', 'danger')
+            return redirect(url_for('request_reset'))
+        
+        form = ResetPasswordForm()
+        if form.validate_on_submit():
+            hashed_password = bcrypt.generate_password_hash(form.password.data).decode('utf-8')
+            user.password = hashed_password
+            db.session.commit()
+            flash('Votre mot de passe a été réinitialisé ! Vous pouvez maintenant vous connecter.', 'success')
+            return redirect(url_for('login'))
+        
+        return render_template('auth/reset_password.html', form=form)
+    
+    # ========== COMPLÉTION DE PROFIL ==========
     @app.route('/complete-maid-profile', methods=['GET', 'POST'])
     @login_required
     def complete_maid_profile():
@@ -107,6 +160,11 @@ def init_routes(app):
                 experience=form.experience.data,
                 skills=form.skills.data
             )
+            
+            if form.profile_picture.data:
+                picture_file = save_picture(form.profile_picture.data)
+                profile.profile_picture = picture_file
+            
             db.session.add(profile)
             db.session.commit()
             flash('Profil complété avec succès ! En attente de vérification par l\'admin.', 'success')
@@ -126,6 +184,7 @@ def init_routes(app):
         flash('Profil client créé !', 'success')
         return redirect(url_for('dashboard'))
     
+    # ========== RECHERCHE ET PROFILS ==========
     @app.route('/maids')
     def browse_maids():
         city = request.args.get('city', '')
@@ -151,9 +210,11 @@ def init_routes(app):
     
     @app.route('/maid/<int:maid_id>')
     def maid_profile(maid_id):
+        """Profil public d'une aide ménagère"""
         maid_profile = MaidProfile.query.get_or_404(maid_id)
         user = User.query.get(maid_profile.user_id)
         
+        # Vérifier si c'est dans les favoris du client connecté
         is_favorite = False
         if current_user.is_authenticated and current_user.role == 'client':
             favorite = Favorite.query.filter_by(
@@ -162,11 +223,11 @@ def init_routes(app):
             ).first()
             is_favorite = favorite is not None
         
+        # FORCE l'utilisation du bon template
         return render_template('public_maid_profile.html', 
-                             maid=maid_profile, 
-                             user=user,
-                             is_favorite=is_favorite)
-    
+                            maid=maid_profile, 
+                            user=user,
+                            is_favorite=is_favorite)
     @app.route('/favorite/<int:maid_id>', methods=['POST'])
     @login_required
     def toggle_favorite(maid_id):
@@ -190,6 +251,7 @@ def init_routes(app):
         db.session.commit()
         return redirect(url_for('maid_profile', maid_id=maid_id))
     
+    # ========== DASHBOARDS ==========
     @app.route('/client/dashboard')
     @login_required
     def client_dashboard():
@@ -231,6 +293,7 @@ def init_routes(app):
                              profile=current_user.maid_profile,
                              requests=requests)
     
+    # ========== MESSAGERIE ET CONTACT ==========
     @app.route('/contact/<int:maid_id>', methods=['GET', 'POST'])
     @login_required
     def contact_maid(maid_id):
@@ -275,7 +338,7 @@ def init_routes(app):
     def view_request(request_id):
         contact_request = ContactRequest.query.get_or_404(request_id)
         
-        if current_user.id not in [contact_request.client_id, contact_request.maid_id]:
+        if current_user.id not in [contact_request.client_id, contact_request.maid_id] and current_user.role != 'admin':
             flash('Accès non autorisé.', 'danger')
             return redirect(url_for('dashboard'))
         
@@ -385,12 +448,14 @@ def init_routes(app):
             db.session.add(review)
             
             maid_profile = contact_request.maid.maid_profile
-            all_reviews = Review.query.join(ContactRequest).filter(
-                ContactRequest.maid_id == contact_request.maid_id
-            ).all()
-            
-            total_rating = sum(r.rating for r in all_reviews) + review.rating
-            maid_profile.rating = total_rating / (len(all_reviews) + 1)
+            if maid_profile:
+                all_reviews = Review.query.join(ContactRequest).filter(
+                    ContactRequest.maid_id == contact_request.maid_id,
+                    Review.is_visible == True
+                ).all()
+                
+                total_rating = sum(r.rating for r in all_reviews) + review.rating
+                maid_profile.rating = total_rating / (len(all_reviews) + 1)
             
             db.session.commit()
             flash('Merci pour votre avis !', 'success')
@@ -416,8 +481,24 @@ def init_routes(app):
         
         return render_template('messages.html', requests=requests)
     
-    # ========== ROUTES ADMIN ==========
+    # ========== NOTIFICATIONS ==========
+    @app.route('/notifications')
+    @login_required
+    def notifications():
+        page = request.args.get('page', 1, type=int)
+        notifications = Notification.query.filter_by(user_id=current_user.id).order_by(
+            Notification.created_at.desc()
+        ).paginate(page=page, per_page=20)
+        
+        return render_template('notifications.html', notifications=notifications)
     
+    @app.route('/notifications/count')
+    @login_required
+    def notification_count():
+        count = Notification.query.filter_by(user_id=current_user.id, is_read=False).count()
+        return {'count': count}
+    
+    # ========== ROUTES ADMIN ==========
     @app.route('/admin/dashboard')
     @login_required
     def admin_dashboard():
@@ -428,13 +509,12 @@ def init_routes(app):
         total_users = User.query.count()
         total_maids = User.query.filter_by(role='maid').count()
         total_clients = User.query.filter_by(role='client').count()
-        pending_verifications = MaidProfile.query.join(User).filter(
-            User.is_verified == False
-        ).count()
+        pending_verifications = MaidProfile.query.join(User).filter(User.is_verified == False).count()
         active_requests = ContactRequest.query.filter_by(status='accepted').count()
+        completed_requests = ContactRequest.query.filter_by(status='completed').count()
         total_reviews = Review.query.count()
+        avg_rating = db.session.query(func.avg(Review.rating)).scalar() or 0
         
-        from sqlalchemy import func
         monthly_users = db.session.query(
             func.strftime('%Y-%m', User.created_at).label('month'),
             func.count(User.id).label('count')
@@ -443,15 +523,22 @@ def init_routes(app):
         months = [m[0] for m in monthly_users] if monthly_users else []
         counts = [m[1] for m in monthly_users] if monthly_users else []
         
+        recent_users = User.query.order_by(User.created_at.desc()).limit(5).all()
+        recent_requests = ContactRequest.query.order_by(ContactRequest.created_at.desc()).limit(5).all()
+        
         return render_template('admin/dashboard.html',
                              total_users=total_users,
                              total_maids=total_maids,
                              total_clients=total_clients,
                              pending_verifications=pending_verifications,
                              active_requests=active_requests,
+                             completed_requests=completed_requests,
                              total_reviews=total_reviews,
+                             avg_rating=avg_rating,
                              months=months,
-                             counts=counts)
+                             counts=counts,
+                             recent_users=recent_users,
+                             recent_requests=recent_requests)
     
     @app.route('/admin/users')
     @login_required
@@ -470,9 +557,7 @@ def init_routes(app):
         if search:
             query = query.filter(User.email.ilike(f'%{search}%'))
         
-        users = query.order_by(User.created_at.desc()).paginate(
-            page=page, per_page=20
-        )
+        users = query.order_by(User.created_at.desc()).paginate(page=page, per_page=20)
         
         return render_template('admin/users.html', users=users)
     
@@ -510,9 +595,7 @@ def init_routes(app):
         elif verification_status == 'verified':
             query = query.filter(User.is_verified == True)
         
-        maids = query.order_by(MaidProfile.created_at.desc()).paginate(
-            page=page, per_page=20
-        )
+        maids = query.order_by(MaidProfile.created_at.desc()).paginate(page=page, per_page=20)
         
         return render_template('admin/maids.html', maids=maids)
     
@@ -536,14 +619,8 @@ def init_routes(app):
             flash('Profil mis à jour.', 'success')
             return redirect(url_for('admin_maids'))
         
-        completed_requests = ContactRequest.query.filter_by(
-            maid_id=user.id, 
-            status='completed'
-        ).count()
-        
-        reviews = Review.query.join(ContactRequest).filter(
-            ContactRequest.maid_id == user.id
-        ).order_by(Review.created_at.desc()).limit(10).all()
+        completed_requests = ContactRequest.query.filter_by(maid_id=user.id, status='completed').count()
+        reviews = Review.query.join(ContactRequest).filter(ContactRequest.maid_id == user.id).order_by(Review.created_at.desc()).limit(10).all()
         
         return render_template('admin/maid_detail.html',
                              maid=maid_profile,
@@ -566,11 +643,17 @@ def init_routes(app):
         if status_filter:
             query = query.filter_by(status=status_filter)
         
-        requests = query.order_by(ContactRequest.created_at.desc()).paginate(
-            page=page, per_page=20
-        )
+        requests = query.order_by(ContactRequest.created_at.desc()).paginate(page=page, per_page=15)
         
-        return render_template('admin/requests.html', requests=requests)
+        pending_count = ContactRequest.query.filter_by(status='pending').count()
+        accepted_count = ContactRequest.query.filter_by(status='accepted').count()
+        completed_count = ContactRequest.query.filter_by(status='completed').count()
+        
+        return render_template('admin/requests.html', 
+                             requests=requests,
+                             pending_count=pending_count,
+                             accepted_count=accepted_count,
+                             completed_count=completed_count)
     
     @app.route('/admin/reviews')
     @login_required
@@ -579,8 +662,73 @@ def init_routes(app):
             return redirect(url_for('dashboard'))
         
         page = request.args.get('page', 1, type=int)
-        reviews = Review.query.order_by(Review.created_at.desc()).paginate(
-            page=page, per_page=20
-        )
+        reviews = Review.query.order_by(Review.created_at.desc()).paginate(page=page, per_page=10)
         
-        return render_template('admin/reviews.html', reviews=reviews)
+        avg_rating = db.session.query(func.avg(Review.rating)).scalar() or 0
+        visible_count = Review.query.filter_by(is_visible=True).count()
+        
+        return render_template('admin/reviews.html', 
+                             reviews=reviews,
+                             avg_rating=avg_rating,
+                             visible_count=visible_count)
+    
+    @app.route('/admin/review/<int:review_id>/toggle', methods=['POST'])
+    @login_required
+    def admin_toggle_review(review_id):
+        if current_user.role != 'admin':
+            return redirect(url_for('dashboard'))
+        
+        review = Review.query.get_or_404(review_id)
+        review.is_visible = not review.is_visible
+        db.session.commit()
+        
+        flash(f'Avis {"affiché" if review.is_visible else "masqué"}.', 'success')
+        return redirect(url_for('admin_reviews'))
+    
+    @app.route('/admin/export/users')
+    @login_required
+    def export_users():
+        if current_user.role != 'admin':
+            return redirect(url_for('dashboard'))
+        
+        users = User.query.all()
+        
+        si = StringIO()
+        cw = csv.writer(si)
+        cw.writerow(['ID', 'Email', 'Rôle', 'Vérifié', 'Date inscription'])
+        
+        for user in users:
+            cw.writerow([
+                user.id,
+                user.email,
+                user.role,
+                'Oui' if user.is_verified else 'Non',
+                user.created_at.strftime('%d/%m/%Y')
+            ])
+        
+        output = make_response(si.getvalue())
+        output.headers["Content-Disposition"] = "attachment; filename=users_export.csv"
+        output.headers["Content-type"] = "text/csv"
+        return output
+    
+    # ========== API ==========
+    @app.route('/api/maids')
+    def api_maids():
+        city = request.args.get('city')
+        query = MaidProfile.query.filter_by(is_available=True)
+        
+        if city:
+            query = query.filter(MaidProfile.city.ilike(f'%{city}%'))
+        
+        maids = query.limit(50).all()
+        
+        return {
+            'maids': [{
+                'id': m.id,
+                'name': m.full_name,
+                'city': m.city,
+                'rate': m.hourly_rate,
+                'rating': m.rating,
+                'verified': m.user.is_verified
+            } for m in maids]
+        }

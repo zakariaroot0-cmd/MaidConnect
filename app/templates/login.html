@@ -42,7 +42,9 @@
                         <input type="checkbox" name="remember" class="rounded border-gray-300 text-primary-600 focus:ring-primary-500">
                         <span class="ml-2 text-sm text-gray-600 dark:text-gray-400">Se souvenir de moi</span>
                     </label>
-                    <a href="#" class="text-sm text-primary-600 hover:text-primary-700">Mot de passe oublié ?</a>
+                    <a href="{{ url_for('request_reset') }}" class="text-sm text-primary-600 hover:text-primary-700">
+    Mot de passe oublié ?
+</a>
                 </div>
                 
                 {{ form.submit(class="w-full btn-primary") }}
